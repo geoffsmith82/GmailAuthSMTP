@@ -67,16 +67,6 @@ object Form2: TForm2
     Left = 88
     Top = 64
   end
-  object OAuth2_GMail: TOAuth2Authenticator
-    AccessTokenEndpoint = 'https://accounts.google.com/o/oauth2/token'
-    AccessTokenExpiry = 41488.448189351900000000
-    AuthorizationEndpoint = 'https://accounts.google.com/o/oauth2/auth'
-    RedirectionEndpoint = 'http://localhost:2132'
-    Scope = 'https://mail.google.com/'
-    Left = 208
-    Top = 138
-    AccessTokenExpiryDate = 41488.4481893519d
-  end
   object IdHTTPServer1: TIdHTTPServer
     Active = True
     Bindings = <>
