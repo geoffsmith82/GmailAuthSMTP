@@ -34,7 +34,10 @@ uses
   IdCustomTCPServer,
   IdCustomHTTPServer,
   IdHTTPServer,
-  REST.Authenticator.OAuth, IdContext
+  REST.Authenticator.OAuth,
+  IdContext,
+  IdSASLCollection,
+  IdSASLXOAUTH
   ;
 
 type
@@ -181,24 +184,31 @@ var
   XOAUTH2String : String;
   base64 : TBase64Encoding;
   IdMessage: TIdMessage;
+  xoauthSASL : TIdSASLListEntry;
+  xauth : TIdSASLXOAuth;
 begin
   IdSMTP1.AuthType := satNone;
 
   base64 := TBase64Encoding.Create(0);
   try
-    OAuth2_GMail.ChangeAuthCodeToAccesToken;
 
     Memo1.Lines.Add('refresh_token=' + OAuth2_GMail.RefreshToken);
 
-    XOAUTH2String := base64.Encode('user=' + clientaccount + Chr($01) + 'auth=Bearer ' + OAuth2_GMail.AccessToken + Chr($01) + Chr($01));
+    XOAUTH2String := 'user=' + clientaccount + Chr($01) + 'auth=Bearer ' + OAuth2_GMail.AccessToken + Chr($01) + Chr($01);
 
     IdSMTP1.Host := 'smtp.gmail.com';
     IdSMTP1.Port := 465;
     IdSMTP1.UseTLS := utUseImplicitTLS;
+
+    xoauthSASL := IdSMTP1.SASLMechanisms.Add;
+    xoauthSASL.SASL := TIdSASLXOAuth.Create(nil);
+    TIdSASLXOAuth(xoauthSASL.SASL).Token := XOAUTH2String;
+
     IdSMTP1.Connect;
     Memo1.Lines.Add(XOAUTH2String);
+    IdSMTP1.AuthType := satSASL;
+    IdSMTP1.Authenticate;
 
-    IdSMTP1.SendCmd('AUTH XOAUTH2 ' + XOAUTH2String);
 
     IdMessage := TIdMessage.Create(Self);
     IdMessage.From.Address := clientaccount;
@@ -235,6 +245,7 @@ begin
     begin
       LCode := Copy(LCode, 1, Pos('&', LCode) - 1);
       OAuth2_GMail.AuthCode := LCode;
+      OAuth2_GMail.ChangeAuthCodeToAccesToken;
     end;
   end;
 end;
