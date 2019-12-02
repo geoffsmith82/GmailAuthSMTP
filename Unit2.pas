@@ -37,7 +37,8 @@ uses
   REST.Authenticator.OAuth,
   IdContext,
   IdSASLCollection,
-  IdSASLXOAUTH
+  IdSASLXOAUTH,
+  IdOAuth2Bearer
   ;
 
 type
@@ -59,6 +60,8 @@ type
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure IdConnectionIntercept1Receive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
+    procedure IdConnectionIntercept1Send(ASender: TIdConnectionIntercept; var
+        ABuffer: TIdBytes);
     procedure IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo:
         TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
   private
@@ -194,15 +197,18 @@ begin
 
     Memo1.Lines.Add('refresh_token=' + OAuth2_GMail.RefreshToken);
 
-    XOAUTH2String := 'user=' + clientaccount + Chr($01) + 'auth=Bearer ' + OAuth2_GMail.AccessToken + Chr($01) + Chr($01);
-
     IdSMTP1.Host := 'smtp.gmail.com';
     IdSMTP1.Port := 465;
     IdSMTP1.UseTLS := utUseImplicitTLS;
 
     xoauthSASL := IdSMTP1.SASLMechanisms.Add;
-    xoauthSASL.SASL := TIdSASLXOAuth.Create(nil);
-    TIdSASLXOAuth(xoauthSASL.SASL).Token := XOAUTH2String;
+    xoauthSASL.SASL := TIdOAuth2Bearer.Create(nil);
+
+    TIdOAuth2Bearer(xoauthSASL.SASL).Token := OAuth2_GMail.AccessToken;
+    TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdSMTP1.Host;
+    TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdSMTP1.Port;
+    TIdOAuth2Bearer(xoauthSASL.SASL).User := clientaccount;
+
 
     IdSMTP1.Connect;
     Memo1.Lines.Add(XOAUTH2String);
@@ -226,7 +232,13 @@ end;
 
 procedure TForm2.IdConnectionIntercept1Receive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
 begin
-  Memo1.Lines.Add(TEncoding.ASCII.GetString(ABuffer));
+  Memo1.Lines.Add('R:' + TEncoding.ASCII.GetString(ABuffer));
+end;
+
+procedure TForm2.IdConnectionIntercept1Send(ASender: TIdConnectionIntercept;
+    var ABuffer: TIdBytes);
+begin
+  Memo1.Lines.Add('S:' + TEncoding.ASCII.GetString(ABuffer));
 end;
 
 procedure TForm2.IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo:

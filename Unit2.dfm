@@ -64,6 +64,7 @@ object Form2: TForm2
   end
   object IdConnectionIntercept1: TIdConnectionIntercept
     OnReceive = IdConnectionIntercept1Receive
+    OnSend = IdConnectionIntercept1Send
     Left = 88
     Top = 64
   end
