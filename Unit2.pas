@@ -184,50 +184,46 @@ end;
 
 procedure TForm2.Button2Click(Sender: TObject);
 var
-  XOAUTH2String : String;
-  base64 : TBase64Encoding;
   IdMessage: TIdMessage;
   xoauthSASL : TIdSASLListEntry;
-  xauth : TIdSASLXOAuth;
 begin
   IdSMTP1.AuthType := satNone;
 
-  base64 := TBase64Encoding.Create(0);
-  try
+  Memo1.Lines.Add('refresh_token=' + OAuth2_GMail.RefreshToken);
 
-    Memo1.Lines.Add('refresh_token=' + OAuth2_GMail.RefreshToken);
+  IdSMTP1.Host := 'smtp.gmail.com';
+  IdSMTP1.Port := 465;
+  IdSMTP1.UseTLS := utUseImplicitTLS;
 
-    IdSMTP1.Host := 'smtp.gmail.com';
-    IdSMTP1.Port := 465;
-    IdSMTP1.UseTLS := utUseImplicitTLS;
-
-    xoauthSASL := IdSMTP1.SASLMechanisms.Add;
-    xoauthSASL.SASL := TIdOAuth2Bearer.Create(nil);
-
-    TIdOAuth2Bearer(xoauthSASL.SASL).Token := OAuth2_GMail.AccessToken;
-    TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdSMTP1.Host;
-    TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdSMTP1.Port;
-    TIdOAuth2Bearer(xoauthSASL.SASL).User := clientaccount;
+  xoauthSASL := IdSMTP1.SASLMechanisms.Add;
+  xoauthSASL.SASL := TIdOAuth2Bearer.Create(nil);
+//  xoauthSASL.SASL := TIdSASLXOAuth.Create(nil);
 
 
-    IdSMTP1.Connect;
-    Memo1.Lines.Add(XOAUTH2String);
-    IdSMTP1.AuthType := satSASL;
-    IdSMTP1.Authenticate;
+  TIdOAuth2Bearer(xoauthSASL.SASL).Token := OAuth2_GMail.AccessToken;
+  TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdSMTP1.Host;
+  TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdSMTP1.Port;
+  TIdOAuth2Bearer(xoauthSASL.SASL).User := clientaccount;
 
 
-    IdMessage := TIdMessage.Create(Self);
-    IdMessage.From.Address := clientaccount;
-    IdMessage.From.Name := clientname;
-    IdMessage.ReplyTo.EMailAddresses := IdMessage.From.Address;
-    IdMessage.Recipients.Add.Text := clientsendtoaddress;
-    IdMessage.Subject := 'Hello World';
-    IdMessage.Body.Text := 'Hello Body';
+{
+  TIdSASLXOAuth(xoauthSASL.SASL).Token := OAuth2_GMail.AccessToken;
+  TIdSASLXOAuth(xoauthSASL.SASL).User := clientaccount;
+}
 
-    IdSMTP1.Send(IdMessage);
-  finally
-    FreeAndNil(base64);
-  end;
+  IdSMTP1.Connect;
+  IdSMTP1.AuthType := satSASL;
+  IdSMTP1.Authenticate;
+
+  IdMessage := TIdMessage.Create(Self);
+  IdMessage.From.Address := clientaccount;
+  IdMessage.From.Name := clientname;
+  IdMessage.ReplyTo.EMailAddresses := IdMessage.From.Address;
+  IdMessage.Recipients.Add.Text := clientsendtoaddress;
+  IdMessage.Subject := 'Hello World';
+  IdMessage.Body.Text := 'Hello Body';
+
+  IdSMTP1.Send(IdMessage);
 end;
 
 procedure TForm2.IdConnectionIntercept1Receive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
