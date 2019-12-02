@@ -4,17 +4,17 @@ interface
 
 uses
   Classes,
-  IdSASL,
-  IdSASLOTP,
-  IdSASLDigest
+  IdSASL
   ;
 
 type
   TIdSASLXOAuth = class(TIdSASL)
   private
     FToken: string;
+    FUser: string;
   public
     property Token: string read FToken write FToken;
+    property User: string read FUser write FUser;
     class function ServiceName: TIdSASLServiceName; override;
     constructor Create(AOwner: TComponent);
     destructor Destroy; override;
@@ -42,8 +42,9 @@ end;
 
 function TIdSASLXOAuth.TryStartAuthenticate(const AHost, AProtocolName: String; var VInitialResponse: String): Boolean;
 begin
-  VInitialResponse := Token;
+  VInitialResponse := 'user=' + FUser + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
   Result := True;
 end;
 
 end.
+
