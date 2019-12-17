@@ -1,19 +1,21 @@
 # GmailAuthSMTP
-This project is a very basic demo showing how to authenticate with OAUTH2 and send an email message.
+This project is a very basic demo showing how to authenticate with OAUTH2 and send an email message for gmail as well as hotmail.com/outlook.com/live.com email addresses.
 
-You will need to create a file called GmailGlobals.pas which contains the following constants
+You will need to create a file called Globals.pas which contains the following constants
 
-* clientid
-* clientsecret
-* clientscope
-* clientredirect
-* clientaccount
+* google_clientid
+* google_clientsecret
+* google_clientaccount
+
+* microsoft_clientid
+* microsoft_clientaccount
+
 * clientsendtoaddress
 * clientname
 
 With some further work, this could be further improved to remove some of the required constants and improving some of the error handling.
 
-With the correct scopes, the authentication process could also return a refresh_token that could be saved so that you would not need to login/authorize everytime you start the program.
+At this stage, the refresh_tokens are retrieved in the authentication process - but are not saved.  If these were saved, the process would not require a web browser everytime to authenticate.
 
 
 
