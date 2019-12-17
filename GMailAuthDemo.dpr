@@ -3,7 +3,7 @@ program GMailAuthDemo;
 uses
   Vcl.Forms,
   Unit2 in 'Unit2.pas' {Form2},
-  GmailGlobals in 'GmailGlobals.pas',
+  Globals in 'Globals.pas',
   IdSASLXOAUTH in 'IdSASLXOAUTH.pas',
   IdOAuth2Bearer in 'IdOAuth2Bearer.pas';
 

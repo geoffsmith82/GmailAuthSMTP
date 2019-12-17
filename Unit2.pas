@@ -19,8 +19,10 @@ uses
   IdTCPClient,
   IdExplicitTLSClientServerBase,
   IdMessageClient,
+  IdMessage,
   IdSMTPBase,
   IdSMTP,
+  IdSASL,
   IdIOHandler,
   IdIOHandlerSocket,
   IdIOHandlerStack,
@@ -38,14 +40,33 @@ uses
   IdContext,
   IdSASLCollection,
   IdSASLXOAUTH,
-  IdOAuth2Bearer
+  IdOAuth2Bearer,
+  Vcl.ExtCtrls,
+  Globals
   ;
 
 type
-  TGoogleOAuth2Authenticator = class (TOAuth2Authenticator)
+
+
+  TEnhancedOAuth2Authenticator = class (TOAuth2Authenticator)
   public
     IDToken : string;
     procedure ChangeAuthCodeToAccesToken;
+  end;
+
+  TAuthType = class of TIdSASL;
+
+  TProviderInfo = record
+    AuthenticationType : TAuthType;
+    AuthorizationEndpoint : string;
+    AccessTokenEndpoint : string;
+    ClientID : String;
+    ClientSecret : string;
+    ClientAccount : string;
+    Scopes : string;
+    Host : string;
+    Port : Integer;
+    TLS : TIdUseTLS;
   end;
 
   TForm2 = class(TForm)
@@ -56,23 +77,50 @@ type
     Button1: TButton;
     Button2: TButton;
     IdHTTPServer1: TIdHTTPServer;
+    rgEmailProviders: TRadioGroup;
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure IdConnectionIntercept1Receive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
-    procedure IdConnectionIntercept1Send(ASender: TIdConnectionIntercept; var
-        ABuffer: TIdBytes);
-    procedure IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo:
-        TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+    procedure IdConnectionIntercept1Send(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
+    procedure IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+    procedure rgEmailProvidersClick(Sender: TObject);
   private
     { Private declarations }
-    OAuth2_GMail : TGoogleOAuth2Authenticator;
+    OAuth2_Enhanced : TEnhancedOAuth2Authenticator;
+    procedure SetupAuthenticator;
   public
     { Public declarations }
   end;
 
+const
+  Providers : array[0..1] of TProviderInfo =
+  (
+    (  AuthenticationType : TIdOAuth2Bearer;
+       AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth';
+       AccessTokenEndpoint : 'https://accounts.google.com/o/oauth2/token';
+       ClientID : google_clientid;
+       ClientSecret : google_clientsecret;
+       ClientAccount : google_clientAccount;  // your @gmail.com email address
+       Scopes : 'https://mail.google.com/ openid';
+       Host : 'smtp.gmail.com';
+       Port : 465;
+       TLS : utUseImplicitTLS
+    ),
+    (  AuthenticationType : TIdSASLXOAuth;
+       AuthorizationEndpoint : 'https://login.live.com/oauth20_authorize.srf';
+       AccessTokenEndpoint : 'https://login.live.com/oauth20_token.srf';
+       ClientID : microsoft_clientid;
+       ClientSecret : '';
+       ClientAccount : microsoft_clientAccount; // your @live.com or @hotmail.com email address
+       Scopes : 'wl.imap offline_access';
+       Host : 'smtp-mail.outlook.com';
+       Port : 587;
+       TLS : utUseExplicitTLS
+    )
+  );
 
-
+const clientredirect = 'http://localhost:2132';
 
 var
   Form2: TForm2;
@@ -86,14 +134,12 @@ uses
   System.Net.URLClient,
   REST.Utils,
   Winapi.ShellAPI,
-  IdMessage,
   REST.Consts,
   REST.Types,
-  System.DateUtils,
-  GmailGlobals
+  System.DateUtils
   ;
 
-procedure TGoogleOAuth2Authenticator.ChangeAuthCodeToAccesToken;
+procedure TEnhancedOAuth2Authenticator.ChangeAuthCodeToAccesToken;
 var
   LClient: TRestClient;
   LRequest: TRESTRequest;
@@ -158,24 +204,21 @@ end;
 
 procedure TForm2.FormCreate(Sender: TObject);
 begin
-  OAuth2_GMail := TGoogleOAuth2Authenticator.Create(nil);
-  OAuth2_GMail.ClientID := clientid;
-  OAuth2_GMail.ClientSecret := clientsecret;
-  OAuth2_GMail.Scope := clientscope;
-  OAuth2_GMail.RedirectionEndpoint := clientredirect;
-  OAuth2_GMail.AuthorizationEndpoint := 'https://accounts.google.com/o/oauth2/auth';
-  OAuth2_GMail.AccessTokenEndpoint := 'https://accounts.google.com/o/oauth2/token';
+  OAuth2_Enhanced := TEnhancedOAuth2Authenticator.Create(nil);
+  SetupAuthenticator;
 end;
 
 procedure TForm2.Button1Click(Sender: TObject);
 var
   uri : TURI;
 begin
-  uri := TURI.Create(OAuth2_GMail.AuthorizationRequestURI);
-  uri.AddParameter('access_type', 'offline');
+  uri := TURI.Create(OAuth2_Enhanced.AuthorizationRequestURI);
+  if rgEmailProviders.ItemIndex = 0 then
+    uri.AddParameter('access_type', 'offline');  // For Google to get refresh_token
+
   ShellExecute(Handle,
     'open',
-    PChar(OAuth2_GMail.AuthorizationRequestURI),
+    PChar(uri.ToString),
     nil,
     nil,
     0
@@ -189,34 +232,35 @@ var
 begin
   IdSMTP1.AuthType := satNone;
 
-  Memo1.Lines.Add('refresh_token=' + OAuth2_GMail.RefreshToken);
+  Memo1.Lines.Add('refresh_token=' + OAuth2_Enhanced.RefreshToken);
 
-  IdSMTP1.Host := 'smtp.gmail.com';
-  IdSMTP1.Port := 465;
-  IdSMTP1.UseTLS := utUseImplicitTLS;
+  IdSMTP1.Host := Providers[rgEmailProviders.ItemIndex].Host;
+  IdSMTP1.Port := Providers[rgEmailProviders.ItemIndex].Port;
+  IdSMTP1.UseTLS := Providers[rgEmailProviders.ItemIndex].TLS;
 
   xoauthSASL := IdSMTP1.SASLMechanisms.Add;
-  xoauthSASL.SASL := TIdOAuth2Bearer.Create(nil);
-//  xoauthSASL.SASL := TIdSASLXOAuth.Create(nil);
+  xoauthSASL.SASL := Providers[rgEmailProviders.ItemIndex].AuthenticationType.Create(nil);
 
+  if xoauthSASL.SASL is TIdOAuth2Bearer then
+  begin
+    TIdOAuth2Bearer(xoauthSASL.SASL).Token := OAuth2_Enhanced.AccessToken;
+    TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdSMTP1.Host;
+    TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdSMTP1.Port;
+    TIdOAuth2Bearer(xoauthSASL.SASL).User := Providers[rgEmailProviders.ItemIndex].ClientAccount;
+  end
+  else if xoauthSASL.SASL is TIdSASLXOAuth then
+  begin
+    TIdSASLXOAuth(xoauthSASL.SASL).Token := OAuth2_Enhanced.AccessToken;
+    TIdSASLXOAuth(xoauthSASL.SASL).User := Providers[rgEmailProviders.ItemIndex].ClientAccount;
+  end;
 
-  TIdOAuth2Bearer(xoauthSASL.SASL).Token := OAuth2_GMail.AccessToken;
-  TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdSMTP1.Host;
-  TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdSMTP1.Port;
-  TIdOAuth2Bearer(xoauthSASL.SASL).User := clientaccount;
-
-
-{
-  TIdSASLXOAuth(xoauthSASL.SASL).Token := OAuth2_GMail.AccessToken;
-  TIdSASLXOAuth(xoauthSASL.SASL).User := clientaccount;
-}
 
   IdSMTP1.Connect;
   IdSMTP1.AuthType := satSASL;
   IdSMTP1.Authenticate;
 
   IdMessage := TIdMessage.Create(Self);
-  IdMessage.From.Address := clientaccount;
+  IdMessage.From.Address := Providers[rgEmailProviders.ItemIndex].ClientAccount;
   IdMessage.From.Name := clientname;
   IdMessage.ReplyTo.EMailAddresses := IdMessage.From.Address;
   IdMessage.Recipients.Add.Text := clientsendtoaddress;
@@ -224,6 +268,8 @@ begin
   IdMessage.Body.Text := 'Hello Body';
 
   IdSMTP1.Send(IdMessage);
+
+  IdSMTP1.Disconnect;
 end;
 
 procedure TForm2.IdConnectionIntercept1Receive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
@@ -231,31 +277,40 @@ begin
   Memo1.Lines.Add('R:' + TEncoding.ASCII.GetString(ABuffer));
 end;
 
-procedure TForm2.IdConnectionIntercept1Send(ASender: TIdConnectionIntercept;
-    var ABuffer: TIdBytes);
+procedure TForm2.IdConnectionIntercept1Send(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
 begin
   Memo1.Lines.Add('S:' + TEncoding.ASCII.GetString(ABuffer));
 end;
 
-procedure TForm2.IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo:
-    TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+procedure TForm2.IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
-  LATPos: integer;
   LCode: string;
-  LURL : string;
+  LURL : TURI;
 begin
-  LURL := ARequestInfo.QueryParams;
-  LATPos := Pos('code=', LURL);
-  if (LATPos > 0) then
-  begin
-    LCode := Copy(LURL, LATPos + 5, Length(LURL));
-    if (Pos('&', LCode) > 0) then
-    begin
-      LCode := Copy(LCode, 1, Pos('&', LCode) - 1);
-      OAuth2_GMail.AuthCode := LCode;
-      OAuth2_GMail.ChangeAuthCodeToAccesToken;
-    end;
+  LURL := TURI.Create('https://localhost/?' + ARequestInfo.QueryParams);
+  try
+    LCode := LURL.ParameterByName['code'];
+  except
+    Exit;
   end;
+  OAuth2_Enhanced.AuthCode := LCode;
+  OAuth2_Enhanced.ChangeAuthCodeToAccesToken;
+  Memo1.Lines.Add('Authenticated via OAUTH2');
+end;
+
+procedure TForm2.rgEmailProvidersClick(Sender: TObject);
+begin
+  SetupAuthenticator;
+end;
+
+procedure TForm2.SetupAuthenticator;
+begin
+  OAuth2_Enhanced.ClientID := Providers[rgEmailProviders.ItemIndex].ClientID;
+  OAuth2_Enhanced.ClientSecret := Providers[rgEmailProviders.ItemIndex].Clientsecret;
+  OAuth2_Enhanced.Scope := Providers[rgEmailProviders.ItemIndex].Scopes;
+  OAuth2_Enhanced.RedirectionEndpoint := clientredirect;
+  OAuth2_Enhanced.AuthorizationEndpoint := Providers[rgEmailProviders.ItemIndex].AuthorizationEndpoint;
+  OAuth2_Enhanced.AccessTokenEndpoint := Providers[rgEmailProviders.ItemIndex].AccessTokenEndpoint;
 end;
 
 end.

@@ -2,7 +2,7 @@ object Form2: TForm2
   Left = 0
   Top = 0
   Caption = 'Test OAUTH2 Gmail Send Message'
-  ClientHeight = 214
+  ClientHeight = 377
   ClientWidth = 594
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,7 +16,7 @@ object Form2: TForm2
   TextHeight = 13
   object Memo1: TMemo
     Left = 8
-    Top = 8
+    Top = 72
     Width = 409
     Height = 182
     Lines.Strings = (
@@ -41,6 +41,20 @@ object Form2: TForm2
     TabOrder = 2
     OnClick = Button2Click
   end
+  object rgEmailProviders: TRadioGroup
+    Left = 8
+    Top = 8
+    Width = 409
+    Height = 58
+    Caption = 'Provider'
+    Columns = 2
+    ItemIndex = 0
+    Items.Strings = (
+      'GMail'
+      'Microsoft')
+    TabOrder = 3
+    OnClick = rgEmailProvidersClick
+  end
   object IdSMTP1: TIdSMTP
     Intercept = IdConnectionIntercept1
     IOHandler = IdSSLIOHandlerSocketOpenSSL1
@@ -54,8 +68,8 @@ object Form2: TForm2
     MaxLineAction = maException
     Port = 25
     DefaultPort = 0
-    SSLOptions.Method = sslvTLSv1_2
-    SSLOptions.SSLVersions = [sslvTLSv1_2]
+    SSLOptions.Method = sslvSSLv23
+    SSLOptions.SSLVersions = [sslvTLSv1_1, sslvTLSv1_2]
     SSLOptions.Mode = sslmUnassigned
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0

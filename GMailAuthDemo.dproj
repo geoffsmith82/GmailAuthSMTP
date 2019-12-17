@@ -102,7 +102,7 @@
             <Form>Form2</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="GmailGlobals.pas"/>
+        <DCCReference Include="Globals.pas"/>
         <DCCReference Include="IdSASLXOAUTH.pas"/>
         <DCCReference Include="IdOAuth2Bearer.pas"/>
         <BuildConfiguration Include="Release">
