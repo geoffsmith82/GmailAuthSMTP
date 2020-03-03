@@ -42,6 +42,7 @@ uses
   IdSASLXOAUTH,
   IdOAuth2Bearer,
   Vcl.ExtCtrls,
+  IdPOP3,
   Globals
   ;
 
@@ -64,25 +65,32 @@ type
     ClientSecret : string;
     ClientAccount : string;
     Scopes : string;
-    Host : string;
-    Port : Integer;
+    SmtpHost : string;
+    SmtpPort : Integer;
+    PopHost : string;
+    PopPort : Integer;
     TLS : TIdUseTLS;
   end;
 
   TForm2 = class(TForm)
     IdSMTP1: TIdSMTP;
-    IdSSLIOHandlerSocketOpenSSL1: TIdSSLIOHandlerSocketOpenSSL;
+    IdSSLIOHandlerSocketSMTP: TIdSSLIOHandlerSocketOpenSSL;
     Memo1: TMemo;
-    IdConnectionIntercept1: TIdConnectionIntercept;
+    IdConnectionInterceptSMTP: TIdConnectionIntercept;
     Button1: TButton;
-    Button2: TButton;
+    btnSendMsg: TButton;
     IdHTTPServer1: TIdHTTPServer;
     rgEmailProviders: TRadioGroup;
+    IdPOP3: TIdPOP3;
+    btnCheckMsg: TButton;
+    IdConnectionPOP: TIdConnectionIntercept;
+    IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL;
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
-    procedure Button2Click(Sender: TObject);
-    procedure IdConnectionIntercept1Receive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
-    procedure IdConnectionIntercept1Send(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
+    procedure btnSendMsgClick(Sender: TObject);
+    procedure btnCheckMsgClick(Sender: TObject);
+    procedure IdConnectionInterceptSMTPReceive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
+    procedure IdConnectionInterceptSMTPSend(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
     procedure IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
     procedure rgEmailProvidersClick(Sender: TObject);
   private
@@ -103,8 +111,10 @@ const
        ClientSecret : google_clientsecret;
        ClientAccount : google_clientAccount;  // your @gmail.com email address
        Scopes : 'https://mail.google.com/ openid';
-       Host : 'smtp.gmail.com';
-       Port : 465;
+       SmtpHost : 'smtp.gmail.com';
+       SmtpPort : 465;
+       PopHost : 'pop.gmail.com';
+       PopPort : 995;
        TLS : utUseImplicitTLS
     ),
     (  AuthenticationType : TIdSASLXOAuth;
@@ -114,8 +124,8 @@ const
        ClientSecret : '';
        ClientAccount : microsoft_clientAccount; // your @live.com or @hotmail.com email address
        Scopes : 'wl.imap offline_access';
-       Host : 'smtp-mail.outlook.com';
-       Port : 587;
+       SmtpHost : 'smtp-mail.outlook.com';
+       SmtpPort : 587;
        TLS : utUseExplicitTLS
     )
   );
@@ -225,7 +235,7 @@ begin
   );
 end;
 
-procedure TForm2.Button2Click(Sender: TObject);
+procedure TForm2.btnSendMsgClick(Sender: TObject);
 var
   IdMessage: TIdMessage;
   xoauthSASL : TIdSASLListEntry;
@@ -234,8 +244,8 @@ begin
 
   Memo1.Lines.Add('refresh_token=' + OAuth2_Enhanced.RefreshToken);
 
-  IdSMTP1.Host := Providers[rgEmailProviders.ItemIndex].Host;
-  IdSMTP1.Port := Providers[rgEmailProviders.ItemIndex].Port;
+  IdSMTP1.Host := Providers[rgEmailProviders.ItemIndex].SmtpHost;
+  IdSMTP1.Port := Providers[rgEmailProviders.ItemIndex].SmtpPort;
   IdSMTP1.UseTLS := Providers[rgEmailProviders.ItemIndex].TLS;
 
   xoauthSASL := IdSMTP1.SASLMechanisms.Add;
@@ -272,12 +282,52 @@ begin
   IdSMTP1.Disconnect;
 end;
 
-procedure TForm2.IdConnectionIntercept1Receive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
+procedure TForm2.btnCheckMsgClick(Sender: TObject);
+var
+  IdMessage: TIdMessage;
+  xoauthSASL : TIdSASLListEntry;
+  msgCount : Integer;
+begin
+
+  Memo1.Lines.Add('refresh_token=' + OAuth2_Enhanced.RefreshToken);
+
+  IdPOP3.Host := Providers[rgEmailProviders.ItemIndex].PopHost;
+  IdPOP3.Port := Providers[rgEmailProviders.ItemIndex].PopPort;
+  IdPOP3.UseTLS := Providers[rgEmailProviders.ItemIndex].TLS;
+
+  xoauthSASL := IdPOP3.SASLMechanisms.Add;
+  xoauthSASL.SASL := Providers[rgEmailProviders.ItemIndex].AuthenticationType.Create(nil);
+
+  if xoauthSASL.SASL is TIdOAuth2Bearer then
+  begin
+    TIdOAuth2Bearer(xoauthSASL.SASL).Token := OAuth2_Enhanced.AccessToken;
+    TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdPOP3.Host;
+    TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdPOP3.Port;
+    TIdOAuth2Bearer(xoauthSASL.SASL).User := Providers[rgEmailProviders.ItemIndex].ClientAccount;
+  end
+  else if xoauthSASL.SASL is TIdSASLXOAuth then
+  begin
+    TIdSASLXOAuth(xoauthSASL.SASL).Token := OAuth2_Enhanced.AccessToken;
+    TIdSASLXOAuth(xoauthSASL.SASL).User := Providers[rgEmailProviders.ItemIndex].ClientAccount;
+  end;
+
+  IdPOP3.AuthType := patSASL;
+  IdPOP3.Connect;
+  IdPOP3.Login;
+
+  msgCount := IdPOP3.CheckMessages;
+
+  ShowMessage(msgCount.ToString + ' Messages available for download');
+
+  IdPOP3.Disconnect;
+end;
+
+procedure TForm2.IdConnectionInterceptSMTPReceive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
 begin
   Memo1.Lines.Add('R:' + TEncoding.ASCII.GetString(ABuffer));
 end;
 
-procedure TForm2.IdConnectionIntercept1Send(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
+procedure TForm2.IdConnectionInterceptSMTPSend(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
 begin
   Memo1.Lines.Add('S:' + TEncoding.ASCII.GetString(ABuffer));
 end;

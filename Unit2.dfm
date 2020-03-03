@@ -32,14 +32,14 @@ object Form2: TForm2
     TabOrder = 1
     OnClick = Button1Click
   end
-  object Button2: TButton
+  object btnSendMsg: TButton
     Left = 423
     Top = 39
     Width = 75
     Height = 25
     Caption = 'Send MSG'
     TabOrder = 2
-    OnClick = Button2Click
+    OnClick = btnSendMsgClick
   end
   object rgEmailProviders: TRadioGroup
     Left = 8
@@ -55,18 +55,25 @@ object Form2: TForm2
     TabOrder = 3
     OnClick = rgEmailProvidersClick
   end
+  object btnCheckMsg: TButton
+    Left = 432
+    Top = 96
+    Width = 75
+    Height = 25
+    Caption = 'Check MSG'#39's'
+    TabOrder = 4
+    OnClick = btnCheckMsgClick
+  end
   object IdSMTP1: TIdSMTP
-    Intercept = IdConnectionIntercept1
-    IOHandler = IdSSLIOHandlerSocketOpenSSL1
+    IOHandler = IdSSLIOHandlerSocketSMTP
     SASLMechanisms = <>
     Left = 88
     Top = 128
   end
-  object IdSSLIOHandlerSocketOpenSSL1: TIdSSLIOHandlerSocketOpenSSL
-    Destination = ':25'
-    Intercept = IdConnectionIntercept1
+  object IdSSLIOHandlerSocketSMTP: TIdSSLIOHandlerSocketOpenSSL
+    Destination = ':110'
     MaxLineAction = maException
-    Port = 25
+    Port = 110
     DefaultPort = 0
     SSLOptions.Method = sslvSSLv23
     SSLOptions.SSLVersions = [sslvTLSv1_1, sslvTLSv1_2]
@@ -76,9 +83,9 @@ object Form2: TForm2
     Left = 248
     Top = 56
   end
-  object IdConnectionIntercept1: TIdConnectionIntercept
-    OnReceive = IdConnectionIntercept1Receive
-    OnSend = IdConnectionIntercept1Send
+  object IdConnectionInterceptSMTP: TIdConnectionIntercept
+    OnReceive = IdConnectionInterceptSMTPReceive
+    OnSend = IdConnectionInterceptSMTPSend
     Left = 88
     Top = 64
   end
@@ -89,5 +96,33 @@ object Form2: TForm2
     OnCommandGet = IdHTTPServer1CommandGet
     Left = 352
     Top = 120
+  end
+  object IdPOP3: TIdPOP3
+    Intercept = IdConnectionPOP
+    IOHandler = IdSSLIOHandlerSocketPOP
+    AutoLogin = True
+    SASLMechanisms = <>
+    Left = 456
+    Top = 232
+  end
+  object IdConnectionPOP: TIdConnectionIntercept
+    OnReceive = IdConnectionInterceptSMTPReceive
+    OnSend = IdConnectionInterceptSMTPSend
+    Left = 96
+    Top = 272
+  end
+  object IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL
+    Destination = ':110'
+    Intercept = IdConnectionPOP
+    MaxLineAction = maException
+    Port = 110
+    DefaultPort = 0
+    SSLOptions.Method = sslvSSLv23
+    SSLOptions.SSLVersions = [sslvTLSv1_1, sslvTLSv1_2]
+    SSLOptions.Mode = sslmUnassigned
+    SSLOptions.VerifyMode = []
+    SSLOptions.VerifyDepth = 0
+    Left = 256
+    Top = 264
   end
 end
