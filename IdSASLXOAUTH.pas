@@ -19,6 +19,10 @@ type
     constructor Create(AOwner: TComponent);
     destructor Destroy; override;
     function TryStartAuthenticate(const AHost, AProtocolName : String; var VInitialResponse: String): Boolean; override;
+    function ContinueAuthenticate(const ALastResponse, AHost, AProtocolName : string): string; override;
+    function StartAuthenticate(const AChallenge, AHost, AProtocolName: string): string; override;
+    { For cleaning up after Authentication }
+    procedure FinishAuthenticate; override;
   end;
 
 implementation
@@ -44,6 +48,21 @@ function TIdSASLXOAuth.TryStartAuthenticate(const AHost, AProtocolName: String; 
 begin
   VInitialResponse := 'user=' + FUser + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
   Result := True;
+end;
+
+function TIdSASLXOAuth.StartAuthenticate(const AChallenge, AHost, AProtocolName: string): string;
+begin
+  Result := 'user=' + FUser + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
+end;
+
+function TIdSASLXOAuth.ContinueAuthenticate(const ALastResponse, AHost, AProtocolName: string): string;
+begin
+  // Nothing to do
+end;
+
+procedure TIdSASLXOAuth.FinishAuthenticate;
+begin
+  // Nothing to do
 end;
 
 end.
