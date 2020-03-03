@@ -3,7 +3,8 @@ unit IdOAuth2Bearer;
 interface
 
 uses
-  Classes,
+  System.Classes,
+  System.SysUtils,
   IdSASL
   ;
 
@@ -23,6 +24,10 @@ type
     constructor Create(AOwner: TComponent);
     destructor Destroy; override;
     function TryStartAuthenticate(const AHost, AProtocolName : String; var VInitialResponse: String): Boolean; override;
+    function ContinueAuthenticate(const ALastResponse, AHost, AProtocolName : string): string; override;
+    function StartAuthenticate(const AChallenge, AHost, AProtocolName: string): string; override;
+    { For cleaning up after Authentication }
+    procedure FinishAuthenticate; override;
   end;
 
 implementation
@@ -46,8 +51,23 @@ end;
 
 function TIdOAuth2Bearer.TryStartAuthenticate(const AHost, AProtocolName: String; var VInitialResponse: String): Boolean;
 begin
-  VInitialResponse := 'n,a=' + FUser + ',' + Chr($01) + 'host=' + FHost + Chr($01) + 'port=465' + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
+  VInitialResponse := 'n,a=' + FUser + ',' + Chr($01) + 'host=' + FHost + Chr($01) + 'port=' + FPort.ToString + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
   Result := True;
+end;
+
+function TIdOAuth2Bearer.StartAuthenticate(const AChallenge, AHost, AProtocolName: string): string;
+begin
+  Result := 'n,a=' + FUser + ',' + Chr($01) + 'host=' + FHost + Chr($01) + 'port=' + FPort.ToString + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
+end;
+
+function TIdOAuth2Bearer.ContinueAuthenticate(const ALastResponse, AHost, AProtocolName: string): string;
+begin
+  // Nothing to do
+end;
+
+procedure TIdOAuth2Bearer.FinishAuthenticate;
+begin
+  // Nothing to do
 end;
 
 end.
