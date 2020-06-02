@@ -51,9 +51,12 @@ type
 
 
   TEnhancedOAuth2Authenticator = class (TOAuth2Authenticator)
+  private
+    procedure RequestAccessToken;
   public
     IDToken : string;
     procedure ChangeAuthCodeToAccesToken;
+    procedure RefreshAccessTokenIfRequired;
   end;
 
   TAuthType = class of TIdSASL;
@@ -158,6 +161,82 @@ uses
   REST.Types,
   System.DateUtils
   ;
+
+const
+  SClientIDNeeded = 'An ClientID is needed before a token can be requested';
+  SRefreshTokenNeeded = 'An Refresh Token is needed before an Access Token can be requested';
+
+procedure TEnhancedOAuth2Authenticator.RefreshAccessTokenIfRequired;
+begin
+  if AccessTokenExpiry < now then
+  begin
+    RequestAccessToken;
+  end;
+end;
+
+procedure TEnhancedOAuth2Authenticator.RequestAccessToken;
+var
+  LClient: TRestClient;
+  LRequest: TRESTRequest;
+  LToken: string;
+  LIntValue: int64;
+begin
+
+  // we do need an clientid here, because we want
+  // to send it to the servce and exchange the code into an
+  // access-token.
+  if ClientID = '' then
+    raise EOAuth2Exception.Create(SClientIDNeeded);
+
+  if RefreshToken = '' then
+    raise EOAuth2Exception.Create(SRefreshTokenNeeded);
+
+  LClient := TRestClient.Create(AccessTokenEndpoint);
+  try
+    LRequest := TRESTRequest.Create(LClient); // The LClient now "owns" the Request and will free it.
+    LRequest.Method := TRESTRequestMethod.rmPOST;
+
+    LRequest.AddAuthParameter('refresh_token', RefreshToken, TRESTRequestParameterKind.pkGETorPOST);
+    LRequest.AddAuthParameter('client_id', ClientID, TRESTRequestParameterKind.pkGETorPOST);
+    LRequest.AddAuthParameter('client_secret', ClientSecret, TRESTRequestParameterKind.pkGETorPOST);
+    LRequest.AddAuthParameter('grant_type', 'refresh_token', TRESTRequestParameterKind.pkGETorPOST);
+
+    LRequest.Execute;
+
+    if LRequest.Response.GetSimpleValue('access_token', LToken) then
+      AccessToken := LToken;
+    if LRequest.Response.GetSimpleValue('refresh_token', LToken) then
+      RefreshToken := LToken;
+    if LRequest.Response.GetSimpleValue('id_token', LToken) then
+      IDToken := LToken;
+
+    // detect token-type. this is important for how using it later
+    if LRequest.Response.GetSimpleValue('token_type', LToken) then
+      TokenType := OAuth2TokenTypeFromString(LToken);
+
+    // if provided by the service, the field "expires_in" contains
+    // the number of seconds an access-token will be valid
+    if LRequest.Response.GetSimpleValue('expires_in', LToken) then
+    begin
+      LIntValue := StrToIntdef(LToken, -1);
+      if (LIntValue > -1) then
+        AccessTokenExpiry := IncSecond(Now, LIntValue)
+      else
+        AccessTokenExpiry := 0.0;
+    end;
+
+    // an authentication-code may only be used once.
+    // if we succeeded here and got an access-token, then
+    // we do clear the auth-code as is is not valid anymore
+    // and also not needed anymore.
+    if (AccessToken <> '') then
+    begin
+      AuthCode := '';
+    end;
+  finally
+    LClient.DisposeOf;
+  end;
+end;
 
 
 // This function is basically a copy of the ancestor... but is need so we can also get the id_token value.
