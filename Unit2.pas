@@ -43,6 +43,7 @@ uses
   IdOAuth2Bearer,
   Vcl.ExtCtrls,
   IdPOP3,
+  IniFiles,
   Globals
   ;
 
@@ -69,6 +70,7 @@ type
     SmtpPort : Integer;
     PopHost : string;
     PopPort : Integer;
+    AuthName : string;
     TLS : TIdUseTLS;
   end;
 
@@ -77,7 +79,7 @@ type
     IdSSLIOHandlerSocketSMTP: TIdSSLIOHandlerSocketOpenSSL;
     Memo1: TMemo;
     IdConnectionInterceptSMTP: TIdConnectionIntercept;
-    Button1: TButton;
+    btnAuthenticate: TButton;
     btnSendMsg: TButton;
     IdHTTPServer1: TIdHTTPServer;
     rgEmailProviders: TRadioGroup;
@@ -85,10 +87,13 @@ type
     btnCheckMsg: TButton;
     IdConnectionPOP: TIdConnectionIntercept;
     IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL;
+    btnClearAuthToken: TButton;
+    procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
+    procedure btnAuthenticateClick(Sender: TObject);
     procedure btnSendMsgClick(Sender: TObject);
     procedure btnCheckMsgClick(Sender: TObject);
+    procedure btnClearAuthTokenClick(Sender: TObject);
     procedure IdConnectionInterceptSMTPReceive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
     procedure IdConnectionInterceptSMTPSend(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
     procedure IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
@@ -96,6 +101,7 @@ type
   private
     { Private declarations }
     OAuth2_Enhanced : TEnhancedOAuth2Authenticator;
+    IniSettings : TIniFile;
     procedure SetupAuthenticator;
   public
     { Public declarations }
@@ -115,6 +121,7 @@ const
        SmtpPort : 465;
        PopHost : 'pop.gmail.com';
        PopPort : 995;
+       AuthName : 'Google';
        TLS : utUseImplicitTLS
     ),
     (  AuthenticationType : TIdSASLXOAuth;
@@ -124,9 +131,12 @@ const
        ClientSecret : '';
        ClientAccount : microsoft_clientAccount; // your @live.com or @hotmail.com email address
        Scopes : 'wl.imap offline_access';
-       SmtpHost : 'smtp-mail.outlook.com';
+       SmtpHost : 'smtp.office365.com';
        SmtpPort : 587;
-       TLS : utUseExplicitTLS
+       PopHost : 'outlook.office365.com';
+       PopPort : 995;
+       AuthName : 'Microsoft';
+       TLS : utUseImplicitTLS
     )
   );
 
@@ -149,6 +159,8 @@ uses
   System.DateUtils
   ;
 
+
+// This function is basically a copy of the ancestor... but is need so we can also get the id_token value.
 procedure TEnhancedOAuth2Authenticator.ChangeAuthCodeToAccesToken;
 var
   LClient: TRestClient;
@@ -212,13 +224,24 @@ begin
 
 end;
 
-procedure TForm2.FormCreate(Sender: TObject);
+procedure TForm2.FormDestroy(Sender: TObject);
 begin
+  FreeAndNil(IniSettings);
+  FreeAndNil(OAuth2_Enhanced);
+end;
+
+procedure TForm2.FormCreate(Sender: TObject);
+var
+  LFilename : string;
+begin
+  LFilename := ChangeFileExt(ParamStr(0),'.ini');
+  IniSettings := TIniFile.Create(LFilename);
+
   OAuth2_Enhanced := TEnhancedOAuth2Authenticator.Create(nil);
   SetupAuthenticator;
 end;
 
-procedure TForm2.Button1Click(Sender: TObject);
+procedure TForm2.btnAuthenticateClick(Sender: TObject);
 var
   uri : TURI;
 begin
@@ -284,7 +307,6 @@ end;
 
 procedure TForm2.btnCheckMsgClick(Sender: TObject);
 var
-  IdMessage: TIdMessage;
   xoauthSASL : TIdSASLListEntry;
   msgCount : Integer;
 begin
@@ -313,6 +335,7 @@ begin
 
   IdPOP3.AuthType := patSASL;
   IdPOP3.Connect;
+  IdPOP3.CAPA;
   IdPOP3.Login;
 
   msgCount := IdPOP3.CheckMessages;
@@ -320,6 +343,18 @@ begin
   ShowMessage(msgCount.ToString + ' Messages available for download');
 
   IdPOP3.Disconnect;
+end;
+
+procedure TForm2.btnClearAuthTokenClick(Sender: TObject);
+var
+  LTokenName : string;
+begin
+  // Delete persistent Refresh_token.  Note
+  //  - This probably should have a logout function called on it
+  //  - The token should be stored in an encrypted way ... but this is just a demo.
+  LTokenName := Providers[rgEmailProviders.ItemIndex].AuthName + 'Token';
+  IniSettings.DeleteKey('Authentication', LTokenName);
+  SetupAuthenticator;
 end;
 
 procedure TForm2.IdConnectionInterceptSMTPReceive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
@@ -336,6 +371,7 @@ procedure TForm2.IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo: TId
 var
   LCode: string;
   LURL : TURI;
+  LTokenName : string;
 begin
   LURL := TURI.Create('https://localhost/?' + ARequestInfo.QueryParams);
   try
@@ -345,7 +381,10 @@ begin
   end;
   OAuth2_Enhanced.AuthCode := LCode;
   OAuth2_Enhanced.ChangeAuthCodeToAccesToken;
+  LTokenName := Providers[rgEmailProviders.ItemIndex].AuthName + 'Token';
+  IniSettings.WriteString('Authentication', LTokenName, OAuth2_Enhanced.RefreshToken);
   Memo1.Lines.Add('Authenticated via OAUTH2');
+  SetupAuthenticator;
 end;
 
 procedure TForm2.rgEmailProvidersClick(Sender: TObject);
@@ -354,6 +393,8 @@ begin
 end;
 
 procedure TForm2.SetupAuthenticator;
+var
+  LTokenName : string;
 begin
   OAuth2_Enhanced.ClientID := Providers[rgEmailProviders.ItemIndex].ClientID;
   OAuth2_Enhanced.ClientSecret := Providers[rgEmailProviders.ItemIndex].Clientsecret;
@@ -361,6 +402,12 @@ begin
   OAuth2_Enhanced.RedirectionEndpoint := clientredirect;
   OAuth2_Enhanced.AuthorizationEndpoint := Providers[rgEmailProviders.ItemIndex].AuthorizationEndpoint;
   OAuth2_Enhanced.AccessTokenEndpoint := Providers[rgEmailProviders.ItemIndex].AccessTokenEndpoint;
+
+  LTokenName := Providers[rgEmailProviders.ItemIndex].AuthName + 'Token';
+  OAuth2_Enhanced.RefreshToken := IniSettings.ReadString('Authentication', LTokenName, '');
+  LTokenName := Providers[rgEmailProviders.ItemIndex].AuthName + 'Token';
+  btnAuthenticate.Enabled := IniSettings.ReadString('Authentication', LTokenName, '').Length = 0;
+  btnClearAuthToken.Enabled := not btnAuthenticate.Enabled;
 end;
 
 end.

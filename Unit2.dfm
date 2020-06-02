@@ -12,6 +12,7 @@ object Form2: TForm2
   Font.Style = []
   OldCreateOrder = False
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object Memo1: TMemo
@@ -23,18 +24,18 @@ object Form2: TForm2
       'Memo1')
     TabOrder = 0
   end
-  object Button1: TButton
+  object btnAuthenticate: TButton
     Left = 423
     Top = 8
-    Width = 75
+    Width = 106
     Height = 25
     Caption = 'Authenticate'
     TabOrder = 1
-    OnClick = Button1Click
+    OnClick = btnAuthenticateClick
   end
   object btnSendMsg: TButton
     Left = 423
-    Top = 39
+    Top = 95
     Width = 75
     Height = 25
     Caption = 'Send MSG'
@@ -56,13 +57,22 @@ object Form2: TForm2
     OnClick = rgEmailProvidersClick
   end
   object btnCheckMsg: TButton
-    Left = 432
-    Top = 96
+    Left = 423
+    Top = 136
     Width = 75
     Height = 25
     Caption = 'Check MSG'#39's'
     TabOrder = 4
     OnClick = btnCheckMsgClick
+  end
+  object btnClearAuthToken: TButton
+    Left = 423
+    Top = 39
+    Width = 106
+    Height = 25
+    Caption = 'Clear Auth Token'
+    TabOrder = 5
+    OnClick = btnClearAuthTokenClick
   end
   object IdSMTP1: TIdSMTP
     IOHandler = IdSSLIOHandlerSocketSMTP
@@ -71,9 +81,9 @@ object Form2: TForm2
     Top = 128
   end
   object IdSSLIOHandlerSocketSMTP: TIdSSLIOHandlerSocketOpenSSL
-    Destination = ':110'
+    Destination = ':25'
     MaxLineAction = maException
-    Port = 110
+    Port = 25
     DefaultPort = 0
     SSLOptions.Method = sslvSSLv23
     SSLOptions.SSLVersions = [sslvTLSv1_1, sslvTLSv1_2]
@@ -100,7 +110,8 @@ object Form2: TForm2
   object IdPOP3: TIdPOP3
     Intercept = IdConnectionPOP
     IOHandler = IdSSLIOHandlerSocketPOP
-    AutoLogin = True
+    AuthType = patSASL
+    AutoLogin = False
     SASLMechanisms = <>
     Left = 456
     Top = 232
@@ -117,9 +128,9 @@ object Form2: TForm2
     MaxLineAction = maException
     Port = 110
     DefaultPort = 0
-    SSLOptions.Method = sslvSSLv23
-    SSLOptions.SSLVersions = [sslvTLSv1_1, sslvTLSv1_2]
-    SSLOptions.Mode = sslmUnassigned
+    SSLOptions.Method = sslvTLSv1_2
+    SSLOptions.SSLVersions = [sslvTLSv1_2]
+    SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
     Left = 256
