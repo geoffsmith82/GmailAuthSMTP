@@ -344,7 +344,18 @@ var
 begin
   IdSMTP1.AuthType := satNone;
 
+  // if we only have refresh_token or access token has expired
+  // request new access_token to use with request
+  OAuth2_Enhanced.RefreshAccessTokenIfRequired;
+
   Memo1.Lines.Add('refresh_token=' + OAuth2_Enhanced.RefreshToken);
+  Memo1.Lines.Add('access_token=' + OAuth2_Enhanced.AccessToken);
+
+  if OAuth2_Enhanced.AccessToken.Length = 0 then
+  begin
+    Memo1.Lines.Add('Failed to authenticate properly');
+    Exit;
+  end;
 
   IdSMTP1.Host := Providers[rgEmailProviders.ItemIndex].SmtpHost;
   IdSMTP1.Port := Providers[rgEmailProviders.ItemIndex].SmtpPort;
@@ -391,6 +402,13 @@ var
 begin
 
   Memo1.Lines.Add('refresh_token=' + OAuth2_Enhanced.RefreshToken);
+  Memo1.Lines.Add('access_token=' + OAuth2_Enhanced.AccessToken);
+
+  if OAuth2_Enhanced.AccessToken.Length = 0 then
+  begin
+    Memo1.Lines.Add('Failed to authenticate properly');
+    Exit;
+  end;
 
   IdPOP3.Host := Providers[rgEmailProviders.ItemIndex].PopHost;
   IdPOP3.Port := Providers[rgEmailProviders.ItemIndex].PopPort;
