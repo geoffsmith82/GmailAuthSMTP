@@ -13,6 +13,7 @@ uses
   Vcl.StdCtrls,
   Vcl.Forms,
   Vcl.Dialogs,
+  IPPeerClient,
   IdBaseComponent,
   IdComponent,
   IdTCPConnection,
@@ -470,6 +471,8 @@ var
   LURL : TURI;
   LTokenName : string;
 begin
+  if ARequestInfo.QueryParams = '' then
+    Exit;
   LURL := TURI.Create('https://localhost/?' + ARequestInfo.QueryParams);
   try
     LCode := LURL.ParameterByName['code'];

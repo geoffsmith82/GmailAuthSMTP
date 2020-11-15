@@ -4,3 +4,4 @@ GmailGlobals.pas
 GMailAuthDemo.dproj.local
 GMailAuthDemo.identcache
 GMailAuthDemo.res
+Globals.pas
