@@ -74,8 +74,22 @@ object Form2: TForm2
     TabOrder = 5
     OnClick = btnClearAuthTokenClick
   end
+  object btnCheckIMAP: TButton
+    Left = 1060
+    Top = 420
+    Width = 188
+    Height = 63
+    Margins.Left = 8
+    Margins.Top = 8
+    Margins.Right = 8
+    Margins.Bottom = 8
+    Caption = 'Check IMAP'
+    TabOrder = 6
+    OnClick = btnCheckIMAPClick
+  end
   object IdSMTP1: TIdSMTP
     IOHandler = IdSSLIOHandlerSocketSMTP
+    AuthType = satSASL
     SASLMechanisms = <>
     Left = 88
     Top = 128
@@ -135,5 +149,35 @@ object Form2: TForm2
     SSLOptions.VerifyDepth = 0
     Left = 256
     Top = 264
+  end
+  object IdIMAP: TIdIMAP4
+    Intercept = IdConnectionInterceptIMAP
+    IOHandler = IdSSLIOHandlerSocketIMAP
+    UseTLS = utUseRequireTLS
+    SASLMechanisms = <>
+    AuthType = iatSASL
+    MilliSecsToWaitToClearBuffer = 10
+    Left = 1016
+    Top = 760
+  end
+  object IdConnectionInterceptIMAP: TIdConnectionIntercept
+    OnReceive = IdConnectionInterceptSMTPReceive
+    OnSend = IdConnectionInterceptSMTPSend
+    Left = 248
+    Top = 688
+  end
+  object IdSSLIOHandlerSocketIMAP: TIdSSLIOHandlerSocketOpenSSL
+    Destination = ':143'
+    Intercept = IdConnectionInterceptIMAP
+    MaxLineAction = maException
+    Port = 143
+    DefaultPort = 0
+    SSLOptions.Method = sslvTLSv1_2
+    SSLOptions.SSLVersions = [sslvTLSv1_2]
+    SSLOptions.Mode = sslmClient
+    SSLOptions.VerifyMode = []
+    SSLOptions.VerifyDepth = 0
+    Left = 648
+    Top = 668
   end
 end

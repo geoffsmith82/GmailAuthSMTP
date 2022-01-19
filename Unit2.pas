@@ -44,6 +44,7 @@ uses
   IdOAuth2Bearer,
   Vcl.ExtCtrls,
   IdPOP3,
+  IdIMAP4,
   IniFiles,
   Globals
   ;
@@ -74,6 +75,8 @@ type
     SmtpPort : Integer;
     PopHost : string;
     PopPort : Integer;
+    ImapHost : string;
+    ImapPort : Integer;
     AuthName : string;
     TLS : TIdUseTLS;
   end;
@@ -92,6 +95,10 @@ type
     IdConnectionPOP: TIdConnectionIntercept;
     IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL;
     btnClearAuthToken: TButton;
+    btnCheckIMAP: TButton;
+    IdIMAP: TIdIMAP4;
+    IdConnectionInterceptIMAP: TIdConnectionIntercept;
+    IdSSLIOHandlerSocketIMAP: TIdSSLIOHandlerSocketOpenSSL;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnAuthenticateClick(Sender: TObject);
@@ -102,6 +109,7 @@ type
     procedure IdConnectionInterceptSMTPSend(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
     procedure IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
     procedure rgEmailProvidersClick(Sender: TObject);
+    procedure btnCheckIMAPClick(Sender: TObject);
   private
     { Private declarations }
     OAuth2_Enhanced : TEnhancedOAuth2Authenticator;
@@ -125,6 +133,8 @@ const
        SmtpPort : 465;
        PopHost : 'pop.gmail.com';
        PopPort : 995;
+       ImapHost : 'imap.gmail.com';
+       ImapPort : 143;
        AuthName : 'Google';
        TLS : utUseImplicitTLS
     ),
@@ -394,6 +404,64 @@ begin
   IdSMTP1.Send(IdMessage);
   IdSMTP1.Disconnect;
   ShowMessage('Message Sent');
+end;
+
+procedure TForm2.btnCheckIMAPClick(Sender: TObject);
+var
+  xoauthSASL : TIdSASLListEntry;
+  msgCount : Integer;
+  mailboxes : TStringList;
+begin
+
+  Memo1.Lines.Add('refresh_token=' + OAuth2_Enhanced.RefreshToken);
+  Memo1.Lines.Add('access_token=' + OAuth2_Enhanced.AccessToken);
+
+  // if we only have refresh_token or access token has expired
+  // request new access_token to use with request
+  OAuth2_Enhanced.RefreshAccessTokenIfRequired;
+
+  if OAuth2_Enhanced.AccessToken.Length = 0 then
+  begin
+    Memo1.Lines.Add('Failed to authenticate properly');
+    Exit;
+  end;
+
+  IdIMAP.Host := Providers[rgEmailProviders.ItemIndex].ImapHost;
+  IdIMAP.Port := Providers[rgEmailProviders.ItemIndex].ImapPort;
+  IdIMAP.UseTLS := Providers[rgEmailProviders.ItemIndex].TLS;
+
+  xoauthSASL := IdIMAP.SASLMechanisms.Add;
+  xoauthSASL.SASL := Providers[rgEmailProviders.ItemIndex].AuthenticationType.Create(nil);
+
+  if xoauthSASL.SASL is TIdOAuth2Bearer then
+  begin
+    TIdOAuth2Bearer(xoauthSASL.SASL).Token := OAuth2_Enhanced.AccessToken;
+    TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdIMAP.Host;
+    TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdIMAP.Port;
+    TIdOAuth2Bearer(xoauthSASL.SASL).User := Providers[rgEmailProviders.ItemIndex].ClientAccount;
+  end
+  else if xoauthSASL.SASL is TIdSASLXOAuth then
+  begin
+    TIdSASLXOAuth(xoauthSASL.SASL).Token := OAuth2_Enhanced.AccessToken;
+    TIdSASLXOAuth(xoauthSASL.SASL).User := Providers[rgEmailProviders.ItemIndex].ClientAccount;
+  end;
+
+  IdIMAP.AuthType := iatSASL;
+  IdIMAP.Connect;
+
+  mailboxes := TStringList.Create;
+  try
+    IdImap.ListMailBoxes(mailboxes);
+    Memo1.Lines.AddStrings(mailboxes);
+  finally
+    FreeAndNil(mailboxes);
+  end;
+
+  IdIMAP.SelectMailBox('[Gmail]/All Mail');
+  msgCount:= IdIMAP.MailBox.TotalMsgs;
+  ShowMessage(msgCount.ToString + ' Messages available for download');
+
+  IdIMAP.Disconnect;
 end;
 
 procedure TForm2.btnCheckMsgClick(Sender: TObject);
