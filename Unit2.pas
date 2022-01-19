@@ -392,8 +392,8 @@ begin
   IdMessage.Body.Text := 'Hello Body';
 
   IdSMTP1.Send(IdMessage);
-
   IdSMTP1.Disconnect;
+  ShowMessage('Message Sent');
 end;
 
 procedure TForm2.btnCheckMsgClick(Sender: TObject);
