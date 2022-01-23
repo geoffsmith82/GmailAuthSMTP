@@ -2,76 +2,86 @@ object Form2: TForm2
   Left = 0
   Top = 0
   Caption = 'Test OAUTH2 Gmail Send Message'
-  ClientHeight = 377
-  ClientWidth = 594
+  ClientHeight = 943
+  ClientWidth = 1485
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
-  Font.Height = -11
+  Font.Height = -28
   Font.Name = 'Tahoma'
   Font.Style = []
-  OldCreateOrder = False
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  PixelsPerInch = 96
-  TextHeight = 13
-  object Memo1: TMemo
-    Left = 8
-    Top = 72
-    Width = 409
-    Height = 182
-    Lines.Strings = (
-      'Memo1')
-    TabOrder = 0
-  end
+  PixelsPerInch = 240
+  TextHeight = 34
   object btnAuthenticate: TButton
-    Left = 423
-    Top = 8
-    Width = 106
-    Height = 25
+    Left = 1059
+    Top = 19
+    Width = 265
+    Height = 63
+    Margins.Left = 8
+    Margins.Top = 8
+    Margins.Right = 8
+    Margins.Bottom = 8
     Caption = 'Authenticate'
-    TabOrder = 1
+    TabOrder = 0
     OnClick = btnAuthenticateClick
   end
   object btnSendMsg: TButton
-    Left = 423
-    Top = 95
-    Width = 75
-    Height = 25
+    Left = 1058
+    Top = 238
+    Width = 187
+    Height = 62
+    Margins.Left = 8
+    Margins.Top = 8
+    Margins.Right = 8
+    Margins.Bottom = 8
     Caption = 'Send MSG'
-    TabOrder = 2
-    OnClick = btnSendMsgClick
+    TabOrder = 1
   end
   object rgEmailProviders: TRadioGroup
-    Left = 8
-    Top = 8
-    Width = 409
-    Height = 58
+    Left = 20
+    Top = 20
+    Width = 1023
+    Height = 145
+    Margins.Left = 8
+    Margins.Top = 8
+    Margins.Right = 8
+    Margins.Bottom = 8
     Caption = 'Provider'
-    Columns = 2
+    Columns = 3
     ItemIndex = 0
     Items.Strings = (
       'GMail'
-      'Microsoft')
-    TabOrder = 3
+      'Microsoft'
+      'Hotmail')
+    TabOrder = 2
     OnClick = rgEmailProvidersClick
   end
   object btnCheckMsg: TButton
-    Left = 423
-    Top = 136
-    Width = 75
-    Height = 25
+    Left = 1058
+    Top = 340
+    Width = 187
+    Height = 63
+    Margins.Left = 8
+    Margins.Top = 8
+    Margins.Right = 8
+    Margins.Bottom = 8
     Caption = 'Check MSG'#39's'
-    TabOrder = 4
+    TabOrder = 3
     OnClick = btnCheckMsgClick
   end
   object btnClearAuthToken: TButton
-    Left = 423
-    Top = 39
-    Width = 106
-    Height = 25
+    Left = 1058
+    Top = 98
+    Width = 265
+    Height = 62
+    Margins.Left = 8
+    Margins.Top = 8
+    Margins.Right = 8
+    Margins.Bottom = 8
     Caption = 'Clear Auth Token'
-    TabOrder = 5
+    TabOrder = 4
     OnClick = btnClearAuthTokenClick
   end
   object btnCheckIMAP: TButton
@@ -84,100 +94,20 @@ object Form2: TForm2
     Margins.Right = 8
     Margins.Bottom = 8
     Caption = 'Check IMAP'
-    TabOrder = 6
+    TabOrder = 5
     OnClick = btnCheckIMAPClick
   end
-  object IdSMTP1: TIdSMTP
-    IOHandler = IdSSLIOHandlerSocketSMTP
-    AuthType = satSASL
-    SASLMechanisms = <>
-    Left = 88
-    Top = 128
-  end
-  object IdSSLIOHandlerSocketSMTP: TIdSSLIOHandlerSocketOpenSSL
-    Destination = ':25'
-    MaxLineAction = maException
-    Port = 25
-    DefaultPort = 0
-    SSLOptions.Method = sslvSSLv23
-    SSLOptions.SSLVersions = [sslvTLSv1_1, sslvTLSv1_2]
-    SSLOptions.Mode = sslmUnassigned
-    SSLOptions.VerifyMode = []
-    SSLOptions.VerifyDepth = 0
-    Left = 248
-    Top = 56
-  end
-  object IdConnectionInterceptSMTP: TIdConnectionIntercept
-    OnReceive = IdConnectionInterceptSMTPReceive
-    OnSend = IdConnectionInterceptSMTPSend
-    Left = 88
-    Top = 64
-  end
-  object IdHTTPServer1: TIdHTTPServer
-    Active = True
-    Bindings = <>
-    DefaultPort = 2132
-    OnCommandGet = IdHTTPServer1CommandGet
-    Left = 352
-    Top = 120
-  end
-  object IdPOP3: TIdPOP3
-    Intercept = IdConnectionPOP
-    IOHandler = IdSSLIOHandlerSocketPOP
-    AuthType = patSASL
-    AutoLogin = False
-    SASLMechanisms = <>
-    Left = 456
-    Top = 232
-  end
-  object IdConnectionPOP: TIdConnectionIntercept
-    OnReceive = IdConnectionInterceptSMTPReceive
-    OnSend = IdConnectionInterceptSMTPSend
-    Left = 96
-    Top = 272
-  end
-  object IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL
-    Destination = ':110'
-    Intercept = IdConnectionPOP
-    MaxLineAction = maException
-    Port = 110
-    DefaultPort = 0
-    SSLOptions.Method = sslvTLSv1_2
-    SSLOptions.SSLVersions = [sslvTLSv1_2]
-    SSLOptions.Mode = sslmClient
-    SSLOptions.VerifyMode = []
-    SSLOptions.VerifyDepth = 0
-    Left = 256
-    Top = 264
-  end
-  object IdIMAP: TIdIMAP4
-    Intercept = IdConnectionInterceptIMAP
-    IOHandler = IdSSLIOHandlerSocketIMAP
-    UseTLS = utUseRequireTLS
-    SASLMechanisms = <>
-    AuthType = iatSASL
-    MilliSecsToWaitToClearBuffer = 10
-    Left = 1016
-    Top = 760
-  end
-  object IdConnectionInterceptIMAP: TIdConnectionIntercept
-    OnReceive = IdConnectionInterceptSMTPReceive
-    OnSend = IdConnectionInterceptSMTPSend
-    Left = 248
-    Top = 688
-  end
-  object IdSSLIOHandlerSocketIMAP: TIdSSLIOHandlerSocketOpenSSL
-    Destination = ':143'
-    Intercept = IdConnectionInterceptIMAP
-    MaxLineAction = maException
-    Port = 143
-    DefaultPort = 0
-    SSLOptions.Method = sslvTLSv1_2
-    SSLOptions.SSLVersions = [sslvTLSv1_2]
-    SSLOptions.Mode = sslmClient
-    SSLOptions.VerifyMode = []
-    SSLOptions.VerifyDepth = 0
-    Left = 648
-    Top = 668
+  object Memo1: TMemo
+    Left = 20
+    Top = 180
+    Width = 1023
+    Height = 455
+    Margins.Left = 8
+    Margins.Top = 8
+    Margins.Right = 8
+    Margins.Bottom = 8
+    Lines.Strings = (
+      'Memo1')
+    TabOrder = 6
   end
 end

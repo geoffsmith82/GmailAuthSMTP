@@ -7,7 +7,7 @@
         <MainSource>GMailAuthDemo.dpr</MainSource>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <ProjectGuid>{C652AA13-C1D2-4DA9-8840-75374532601A}</ProjectGuid>
-        <ProjectVersion>18.8</ProjectVersion>
+        <ProjectVersion>19.3</ProjectVersion>
         <TargetedPlatforms>1</TargetedPlatforms>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
@@ -92,6 +92,11 @@
         <DCCReference Include="Globals.pas"/>
         <DCCReference Include="IdSASLXOAUTH.pas"/>
         <DCCReference Include="IdOAuth2Bearer.pas"/>
+        <DCCReference Include="EmailOAuthDm.pas">
+            <Form>EmailOAuthDataModule</Form>
+            <FormType>dfm</FormType>
+            <DesignClass>TDataModule</DesignClass>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
