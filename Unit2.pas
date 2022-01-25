@@ -34,6 +34,7 @@ type
     procedure rgEmailProvidersClick(Sender: TObject);
     procedure btnCheckIMAPClick(Sender: TObject);
     procedure btnAuthenticateClick(Sender: TObject);
+    procedure btnSendMsgClick(Sender: TObject);
   private
     { Private declarations }
     EmailOAuthDataModule : TEmailOAuthDataModule;
@@ -90,6 +91,11 @@ end;
 procedure TForm2.btnClearAuthTokenClick(Sender: TObject);
 begin
   EmailOAuthDataModule.ClearAuthentication;
+end;
+
+procedure TForm2.btnSendMsgClick(Sender: TObject);
+begin
+  EmailOAuthDataModule.SendMessage('');
 end;
 
 procedure TForm2.LogMsg(msg: string);

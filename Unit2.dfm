@@ -38,6 +38,7 @@ object Form2: TForm2
     Margins.Bottom = 8
     Caption = 'Send MSG'
     TabOrder = 1
+    OnClick = btnSendMsgClick
   end
   object rgEmailProviders: TRadioGroup
     Left = 20
