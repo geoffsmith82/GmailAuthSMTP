@@ -85,7 +85,7 @@ end;
 
 procedure TForm2.btnCheckMsgClick(Sender: TObject);
 begin
-  EmailOAuthDataModule.CheckIMAP;
+  EmailOAuthDataModule.CheckPOP;
 end;
 
 procedure TForm2.btnClearAuthTokenClick(Sender: TObject);

@@ -1,9 +1,9 @@
 object EmailOAuthDataModule: TEmailOAuthDataModule
+  OldCreateOrder = True
   OnCreate = DataModuleCreate
   OnDestroy = DataModuleDestroy
   Height = 3000
   Width = 4000
-  PixelsPerInch = 240
   object IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL
     Destination = ':110'
     MaxLineAction = maException

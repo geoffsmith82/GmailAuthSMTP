@@ -10,6 +10,7 @@ object Form2: TForm2
   Font.Height = -28
   Font.Name = 'Tahoma'
   Font.Style = []
+  OldCreateOrder = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PixelsPerInch = 240

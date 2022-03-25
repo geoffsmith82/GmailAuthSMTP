@@ -202,6 +202,7 @@ procedure TEnhancedOAuth2Authenticator.RequestAccessToken;
 var
   LClient: TRestClient;
   LRequest: TRESTRequest;
+  paramBody: TRESTRequestParameter;
   LToken: string;
   LIntValue: int64;
   url : TURI;
@@ -226,11 +227,15 @@ begin
     LRequest.AddAuthParameter('client_secret', ClientSecret, TRESTRequestParameterKind.pkGETorPOST);
     LRequest.AddAuthParameter('grant_type', 'refresh_token', TRESTRequestParameterKind.pkGETorPOST);
     url := TURI.Create('http://localhost');
-      url.AddParameter('grant_type', 'refresh_token');
-      url.AddParameter('refresh_token', RefreshToken);
-      url.AddParameter('client_id', ClientID);
-      url.AddParameter('client_secret', ClientSecret);
-    LRequest.Params.AddItem('', url.Query, pkREQUESTBODY,[poDoNotEncode], 'application/x-www-form-urlencoded');
+    url.AddParameter('grant_type', 'refresh_token');
+    url.AddParameter('refresh_token', RefreshToken);
+    url.AddParameter('client_id', ClientID);
+    url.AddParameter('client_secret', ClientSecret);
+    paramBody := LRequest.Params.AddItem;
+    paramBody.Value := url.Query;
+    paramBody.Kind := pkREQUESTBODY;
+    paramBody.Options := [poDoNotEncode];
+    paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
 
     LRequest.Execute;
 
@@ -275,6 +280,7 @@ procedure TEnhancedOAuth2Authenticator.ChangeAuthCodeToAccesToken;
 var
   LClient: TRestClient;
   LRequest: TRESTRequest;
+  paramBody : TRESTRequestParameter;
   LToken: string;
   LIntValue: int64;
   url : TURI;
@@ -290,23 +296,19 @@ begin
   try
     LRequest := TRESTRequest.Create(LClient); // The LClient now "owns" the Request and will free it.
     LRequest.Method := TRESTRequestMethod.rmPOST;
-    // LRequest.Client := LClient; // unnecessary since the client "owns" the request it will assign the client
+    url := TURI.Create('http://localhost');
+    url.AddParameter('grant_type', 'authorization_code');
+    url.AddParameter('code', AuthCode);
+    url.AddParameter('client_id', ClientID);
+    url.AddParameter('client_secret', ClientSecret);
+    url.AddParameter('redirect_uri', RedirectionEndpoint);
 
-//    LRequest.AddAuthParameter('code', AuthCode, TRESTRequestParameterKind.pkGETorPOST);
-    LRequest.AddAuthParameter('client_id', ClientID, TRESTRequestParameterKind.pkGETorPOST);
-    LRequest.AddAuthParameter('client_secret', ClientSecret, TRESTRequestParameterKind.pkGETorPOST);
-    LRequest.AddAuthParameter('redirect_uri', RedirectionEndpoint, TRESTRequestParameterKind.pkGETorPOST);
-  //  LRequest.AddAuthParameter('grant_type', 'authorization_code', TRESTRequestParameterKind.pkREQUESTBODY,[poDoNotEncode]);
-      url := TURI.Create('http://localhost');
-      url.AddParameter('grant_type', 'authorization_code');
-      url.AddParameter('code', AuthCode);
-      url.AddParameter('client_id', ClientID);
-      url.AddParameter('client_secret', ClientSecret);
-      url.AddParameter('redirect_uri', RedirectionEndpoint);
-    LRequest.Params.AddItem('', url.Query, pkREQUESTBODY,[poDoNotEncode], 'application/x-www-form-urlencoded');
-    // Handle Delphi 11 BUG
-//    url.AddParameter('grant_type', 'refresh_token');
-//    LRequest.AddBody(url.Query, 'application/x-www-form-urlencoded');
+    paramBody := LRequest.Params.AddItem;
+    paramBody.Value := url.Query;
+    paramBody.Kind := pkREQUESTBODY;
+    paramBody.Options := [poDoNotEncode];
+    paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+
 
     LRequest.Execute;
 
