@@ -18,6 +18,7 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     Top = 248
   end
   object IdPOP3: TIdPOP3
+    Intercept = IdConnectionPOP
     IOHandler = IdSSLIOHandlerSocketPOP
     AuthType = patSASL
     AutoLogin = False
