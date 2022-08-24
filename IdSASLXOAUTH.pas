@@ -12,9 +12,11 @@ type
   private
     FToken: string;
     FUser: string;
+    FTwoLinePopFormat: Boolean;
   public
     property Token: string read FToken write FToken;
     property User: string read FUser write FUser;
+    property TwoLinePopFormat: Boolean read FTwoLinePopFormat write FTwoLinePopFormat;
     class function ServiceName: TIdSASLServiceName; override;
     constructor Create(AOwner: TComponent);
     destructor Destroy; override;
@@ -46,7 +48,14 @@ end;
 
 function TIdSASLXOAuth.TryStartAuthenticate(const AHost, AProtocolName: String; var VInitialResponse: String): Boolean;
 begin
-  VInitialResponse := 'user=' + FUser + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
+  if (AProtocolName = 'pop') and FTwoLinePopFormat then
+  begin
+    // Don't send anything yet
+  end
+  else
+  begin
+    VInitialResponse := 'user=' + FUser + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
+  end;
   Result := True;
 end;
 
