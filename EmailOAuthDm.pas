@@ -56,6 +56,7 @@ type
     ImapPort : Integer;
     AuthName : string;
     TLS : TIdUseTLS;
+    TwoLinePOPFormat: Boolean;
   end;
 
   TEnhancedOAuth2Authenticator = class (TOAuth2Authenticator)
@@ -130,7 +131,7 @@ const
 
   Providers : array[0..2] of TProviderInfo =
   (
-    (  AuthenticationType : TIdOAuth2Bearer;
+    (  AuthenticationType : TIdSASLXOAuth;
        AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth';
        AccessTokenEndpoint : 'https://accounts.google.com/o/oauth2/token';
        LogoutEndpoint : 'https://www.google.com/accounts/Logout';
@@ -145,7 +146,8 @@ const
        ImapHost : 'imap.gmail.com';
        ImapPort : 143;
        AuthName : 'Google';
-       TLS : utUseImplicitTLS
+       TLS : utUseImplicitTLS;
+       TwoLinePOPFormat: False
     ),
     (  AuthenticationType : TIdSASLXOAuth;
        AuthorizationEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';//'https://login.live.com/oauth20_authorize.srf';
@@ -156,14 +158,15 @@ const
        ClientAccount : microsoftoffice_clientaccount; // your @live.com or @hotmail.com email address
        Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
        //'wl.imap offline_access';
-       SmtpHost : 'smtp.office365.com';
+       SmtpHost : 'smtp-mail.outlook.com';
        SmtpPort : 587;
-       PopHost : 'outlook.office365.com';
+       PopHost : 'smtp-mail.outlook.com';
        PopPort : 995;
        ImapHost : 'outlook.office365.com';
        ImapPort : 993;
        AuthName : 'Microsoft';
-       TLS : utUseExplicitTLS
+       TLS : utUseExplicitTLS;
+       TwoLinePOPFormat: True
     ),
     (  AuthenticationType : TIdSASLXOAuth;
        AuthorizationEndpoint : 'https://login.live.com/oauth20_authorize.srf';
@@ -178,10 +181,11 @@ const
        SmtpPort : 587;
        PopHost : 'outlook.office365.com';
        PopPort : 995;
-       ImapHost : 'imap-mail.outlook.com';
+       ImapHost : 'outlook.office365.com';
        ImapPort : 993;
        AuthName : 'Hotmail';
        TLS : utUseExplicitTLS;
+       TwoLinePOPFormat: True
     )
   );
 
@@ -582,7 +586,7 @@ begin
 
   IdPOP3.Host := Providers[SelectedProvider].PopHost;
   IdPOP3.Port := Providers[SelectedProvider].PopPort;
-  IdPOP3.UseTLS := Providers[SelectedProvider].TLS;
+  IdPOP3.UseTLS := utUseRequireTLS;//Providers[SelectedProvider].TLS;
 
   xoauthSASL := IdPOP3.SASLMechanisms.Add;
   xoauthSASL.SASL := Providers[SelectedProvider].AuthenticationType.Create(nil);
@@ -598,11 +602,12 @@ begin
   begin
     TIdSASLXOAuth(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
     TIdSASLXOAuth(xoauthSASL.SASL).User := Providers[SelectedProvider].ClientAccount;
+    TIdSASLXOAuth(xoauthSASL.SASL).TwoLinePopFormat := Providers[SelectedProvider].TwoLinePOPFormat;
   end;
 
   IdPOP3.AuthType := patSASL;
+  IdPOP3.UseTLS := utUseImplicitTLS;
   IdPOP3.Connect;
-  IdPOP3.CAPA;
   IdPOP3.Login;
 
   msgCount := IdPOP3.CheckMessages;
