@@ -3,25 +3,25 @@ unit Unit2;
 interface
 
 uses
-  Winapi.Windows,
-  Winapi.Messages,
-  System.SysUtils,
-  System.Variants,
-  System.Classes,
-  Vcl.Graphics,
-  Vcl.Controls,
-  Vcl.StdCtrls,
-  Vcl.Forms,
-  Vcl.Dialogs,
-  Vcl.ExtCtrls,
-  IdSASL,
-  IdSASLCollection,
-  IdExplicitTLSClientServerBase,
-  EmailOAuthDm,
-  IdOAuth2Bearer,
-  IdSASLXOAUTH,
-  Email.Demo.Types,
-  Globals
+    Winapi.Windows
+  , Winapi.Messages
+  , System.SysUtils
+  , System.Variants
+  , System.Classes
+  , Vcl.Graphics
+  , Vcl.Controls
+  , Vcl.StdCtrls
+  , Vcl.Forms
+  , Vcl.Dialogs
+  , Vcl.ExtCtrls
+  , IdSASL
+  , IdSASLCollection
+  , IdExplicitTLSClientServerBase
+  , EmailOAuthDm
+  , IdOAuth2Bearer
+  , IdSASLXOAUTH
+  , Email.Demo.Types
+  , Globals
   ;
 
 type
@@ -118,10 +118,8 @@ const
     )
   );
 
-
 procedure TForm2.FormDestroy(Sender: TObject);
 begin
-
   FreeAndNil(EmailOAuthDataModule);
 end;
 
@@ -129,6 +127,7 @@ procedure TForm2.FormCreate(Sender: TObject);
 begin
   EmailOAuthDataModule := TEmailOAuthDataModule.Create(nil);
   EmailOAuthDataModule.OnLog := LogMsg;
+  EmailOAuthDataModule.Provider := Providers[rgEmailProviders.ItemIndex];
   EmailOAuthDataModule.SetupAuthenticator;
   UpdateButtonsEnabled;
 end;
@@ -136,8 +135,8 @@ end;
 
 procedure TForm2.UpdateButtonsEnabled;
 begin
-  btnAuthenticate.Enabled :=  not EmailOAuthDataModule.IsAuthenticated;
-  btnClearAuthToken.Enabled :=  EmailOAuthDataModule.IsAuthenticated;
+  btnAuthenticate.Enabled :=  not EmailOAuthDataModule.HasRefreshToken;
+  btnClearAuthToken.Enabled :=  EmailOAuthDataModule.HasRefreshToken;
 end;
 
 procedure TForm2.btnAuthenticateClick(Sender: TObject);
@@ -159,6 +158,7 @@ end;
 procedure TForm2.btnClearAuthTokenClick(Sender: TObject);
 begin
   EmailOAuthDataModule.ClearAuthentication;
+  UpdateButtonsEnabled;
 end;
 
 procedure TForm2.btnSendMsgClick(Sender: TObject);
@@ -176,8 +176,7 @@ begin
   EmailOAuthDataModule.SelectedProvider := rgEmailProviders.ItemIndex;
   EmailOAuthDataModule.Provider := Providers[rgEmailProviders.ItemIndex];
   EmailOAuthDataModule.SetupAuthenticator;
+  UpdateButtonsEnabled;
 end;
-
-
 
 end.

@@ -20,7 +20,7 @@ type
 implementation
 
 uses
-  System.NetEncoding
+    System.NetEncoding
   , System.Net.URLClient
   , System.DateUtils
   , Dialogs
@@ -73,7 +73,8 @@ begin
     url.AddParameter('grant_type', 'refresh_token');
     url.AddParameter('refresh_token', RefreshToken);
     url.AddParameter('client_id', ClientID);
-    url.AddParameter('client_secret', ClientSecret);
+    if not ClientSecret.IsEmpty then
+      url.AddParameter('client_secret', ClientSecret);
     paramBody := LRequest.Params.AddItem;
     paramBody.Value := url.Query;
     paramBody.Kind := pkREQUESTBODY;

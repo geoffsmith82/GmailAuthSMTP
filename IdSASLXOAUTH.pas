@@ -3,8 +3,10 @@ unit IdSASLXOAUTH;
 interface
 
 uses
-  Classes,
-  IdSASL
+  Classes
+  , SysUtils
+  , IdSASL
+  , IdSASL.OAuth.Base
   ;
 
 type

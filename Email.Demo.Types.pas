@@ -3,14 +3,13 @@ unit Email.Demo.Types;
 interface
 
 uses
-    IdSASL
-  , IdSASLCollection
+    IdSASL.OAuth.Base
   , IdExplicitTLSClientServerBase
   ;
 
 type
 
-  TAuthType = class of TIdSASL;
+  TAuthType = class of TIdSASLOAuthBase;
 
   TOnLog = procedure(log: string) of object;
 

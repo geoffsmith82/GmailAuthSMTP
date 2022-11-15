@@ -32,6 +32,7 @@ uses
   , IdSSLOpenSSL
   , IdIMAP4
   , IdSASL
+  , IdSASL.OAuth.Base
   , Email.Demo.Types
   ;
 
@@ -56,14 +57,15 @@ type
     { Private declarations }
     FOAuth2_Enhanced : TEnhancedOAuth2Authenticator;
     FIniSettings : TIniFile;
-    FIsAuthenticated : boolean;
+    FIsAuthenticated : Boolean;
     procedure DoLog(msg: String);
   public
     { Public declarations }
     OnLog: TOnLog;
     SelectedProvider : Integer;
     Provider : TProviderInfo;
-    function IsAuthenticated: boolean;
+    function IsAuthenticated: Boolean;
+    function HasRefreshToken: Boolean;
     procedure Authenticate;
     procedure ClearAuthentication;
     procedure SetupAuthenticator;
@@ -86,8 +88,6 @@ uses
   , System.Net.URLClient
   , System.DateUtils
   , Dialogs
-  , IdSASLXOAUTH
-  , IdOAuth2Bearer
   , Globals
   , REST.Client
   , REST.Consts
@@ -96,10 +96,6 @@ uses
 
 const
   clientredirect = 'http://localhost:2132';
-
-
-
-
 
 procedure TEmailOAuthDataModule.DataModuleCreate(Sender: TObject);
 var
@@ -122,6 +118,10 @@ begin
     OnLog(msg);
 end;
 
+function TEmailOAuthDataModule.HasRefreshToken: Boolean;
+begin
+  Result := not FOAuth2_Enhanced.RefreshToken.IsEmpty;
+end;
 
 procedure TEmailOAuthDataModule.IdConnectionReceive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
 begin
@@ -187,7 +187,7 @@ begin
   //  - The token should be stored in an encrypted way ... but this is just a demo.
   LTokenName := Provider.AuthName + 'Token';
   FIniSettings.DeleteKey('Authentication', LTokenName);
-  EmailOAuthDataModule.SetupAuthenticator;
+  SetupAuthenticator;
 end;
 
 procedure TEmailOAuthDataModule.SendMessage(Path: String);
@@ -195,8 +195,6 @@ var
   IdMessage: TIdMessage;
   xoauthSASL : TIdSASLListEntry;
 begin
-  IdSMTP1.AuthType := satNone;
-
   // if we only have refresh_token or access token has expired
   // request new access_token to use with request
   FOAuth2_Enhanced.ClientID := Provider.ClientID;
@@ -217,23 +215,12 @@ begin
   IdSMTP1.UseTLS := Provider.TLS;
   IdSMTP1.Port := Provider.SmtpPort;
 
-
-
   xoauthSASL := IdSMTP1.SASLMechanisms.Add;
   xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
-  if xoauthSASL.SASL is TIdOAuth2Bearer then
-  begin
-    TIdOAuth2Bearer(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdSMTP1.Host;
-    TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdSMTP1.Port;
-    TIdOAuth2Bearer(xoauthSASL.SASL).User := Provider.ClientAccount;
-  end
-  else if xoauthSASL.SASL is TIdSASLXOAuth then
-  begin
-    TIdSASLXOAuth(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdSASLXOAuth(xoauthSASL.SASL).User := Provider.ClientAccount;
-  end;
+  TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
+  TIdSASLOAuthBase(xoauthSASL.SASL).User := Provider.ClientAccount;
+
   IdSSLIOHandlerSocketSMTP.SSLOptions.SSLVersions := [sslvTLSv1_2];
 
   IdSMTP1.Connect;
@@ -260,7 +247,6 @@ var
   msgCount : Integer;
   mailboxes : TStringList;
 begin
-
   DoLog('refresh_token=' + FOAuth2_Enhanced.RefreshToken);
   DoLog('access_token=' + FOAuth2_Enhanced.AccessToken);
 
@@ -283,18 +269,8 @@ begin
   xoauthSASL := IdIMAP.SASLMechanisms.Add;
   xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
-  if xoauthSASL.SASL is TIdOAuth2Bearer then
-  begin
-    TIdOAuth2Bearer(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdIMAP.Host;
-    TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdIMAP.Port;
-    TIdOAuth2Bearer(xoauthSASL.SASL).User := Provider.ClientAccount;
-  end
-  else if xoauthSASL.SASL is TIdSASLXOAuth then
-  begin
-    TIdSASLXOAuth(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdSASLXOAuth(xoauthSASL.SASL).User := Provider.ClientAccount;
-  end;
+  TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
+  TIdSASLOAuthBase(xoauthSASL.SASL).User := Provider.ClientAccount;
 
   IdIMAP.AuthType := iatSASL;
   IdIMAP.Connect;
@@ -307,19 +283,24 @@ begin
     FreeAndNil(mailboxes);
   end;
 
+{
   IdIMAP.SelectMailBox('[Gmail]/All Mail');
   msgCount:= IdIMAP.MailBox.TotalMsgs;
   ShowMessage(msgCount.ToString + ' Messages available for download');
-
+}
   IdIMAP.Disconnect;
 end;
 
 procedure TEmailOAuthDataModule.CheckPOP;
+const
+  ST_OK = '+OK';
+  ST_SASLCONTINUE = '+';  {Do not translate}
 var
   xoauthSASL : TIdSASLListEntry;
   msgCount : Integer;
 begin
-
+  IdPOP3.Disconnect;
+  IdPOP3.AutoLogin := False;
   DoLog('refresh_token=' + FOAuth2_Enhanced.RefreshToken);
   DoLog('access_token=' + FOAuth2_Enhanced.AccessToken);
 
@@ -342,24 +323,15 @@ begin
   xoauthSASL := IdPOP3.SASLMechanisms.Add;
   xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
-  if xoauthSASL.SASL is TIdOAuth2Bearer then
-  begin
-    TIdOAuth2Bearer(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdPOP3.Host;
-    TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdPOP3.Port;
-    TIdOAuth2Bearer(xoauthSASL.SASL).User := Provider.ClientAccount;
-  end
-  else if xoauthSASL.SASL is TIdSASLXOAuth then
-  begin
-    TIdSASLXOAuth(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdSASLXOAuth(xoauthSASL.SASL).User := Provider.ClientAccount;
-    TIdSASLXOAuth(xoauthSASL.SASL).TwoLinePopFormat := Provider.TwoLinePOPFormat;
-  end;
+  TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
+  TIdSASLOAuthBase(xoauthSASL.SASL).User := Provider.ClientAccount;
 
   IdPOP3.AuthType := patSASL;
   IdPOP3.UseTLS := utUseImplicitTLS;
   IdPOP3.Connect;
-  IdPOP3.Login;
+  IdPOP3.CAPA;
+//  IdPOP3.Login;
+  IdPOP3.SASLMechanisms.LoginSASL('AUTH', IdPOP3.Host, 'pop', [ST_OK], [ST_SASLCONTINUE], IdPOP3, IdPOP3.Capabilities, 'SASL', False); {do not localize}
 
   msgCount := IdPOP3.CheckMessages;
 
@@ -367,7 +339,6 @@ begin
 
   IdPOP3.Disconnect;
 end;
-
 
 procedure TEmailOAuthDataModule.SetupAuthenticator;
 var
@@ -382,7 +353,11 @@ begin
 
   LTokenName := Provider.AuthName + 'Token';
   FOAuth2_Enhanced.RefreshToken := FIniSettings.ReadString('Authentication', LTokenName, '');
-  LTokenName := Provider.AuthName + 'Token';
+  FOAuth2_Enhanced.AccessToken := '';
+  FOAuth2_Enhanced.AccessTokenExpiry := 0;
+  IdSMTP1.Disconnect;
+  IdPOP3.Disconnect;
+  IdIMAP.Disconnect;
 end;
 
 end.

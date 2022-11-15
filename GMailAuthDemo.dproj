@@ -7,7 +7,7 @@
         <MainSource>GMailAuthDemo.dpr</MainSource>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <ProjectGuid>{C652AA13-C1D2-4DA9-8840-75374532601A}</ProjectGuid>
-        <ProjectVersion>19.3</ProjectVersion>
+        <ProjectVersion>19.5</ProjectVersion>
         <TargetedPlatforms>1</TargetedPlatforms>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
@@ -91,12 +91,15 @@
         </DCCReference>
         <DCCReference Include="Globals.pas"/>
         <DCCReference Include="IdSASLXOAUTH.pas"/>
-        <DCCReference Include="IdOAuth2Bearer.pas"/>
         <DCCReference Include="EmailOAuthDm.pas">
             <Form>EmailOAuthDataModule</Form>
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
+        <DCCReference Include="IdOAuth2Bearer.pas"/>
+        <DCCReference Include="REST.Authenticator.EnhancedOAuth.pas"/>
+        <DCCReference Include="Email.Demo.Types.pas"/>
+        <DCCReference Include="IdSASL.OAuth.Base.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -118,7 +121,7 @@
                     <Source Name="MainSource">GMailAuthDemo.dpr</Source>
                 </Source>
             </Delphi.Personality>
-            <Deployment Version="3">
+            <Deployment Version="4">
                 <DeployFile LocalName="Win32\Debug\GMailAuthDemo.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>GMailAuthDemo.exe</RemoteName>
