@@ -226,10 +226,6 @@ begin
     LRequest := TRESTRequest.Create(LClient); // The LClient now "owns" the Request and will free it.
     LRequest.Method := TRESTRequestMethod.rmPOST;
 
-    LRequest.AddAuthParameter('refresh_token', RefreshToken, TRESTRequestParameterKind.pkGETorPOST);
-    LRequest.AddAuthParameter('client_id', ClientID, TRESTRequestParameterKind.pkGETorPOST);
-    LRequest.AddAuthParameter('client_secret', ClientSecret, TRESTRequestParameterKind.pkGETorPOST);
-    LRequest.AddAuthParameter('grant_type', 'refresh_token', TRESTRequestParameterKind.pkGETorPOST);
     url := TURI.Create('http://localhost');
     url.AddParameter('grant_type', 'refresh_token');
     url.AddParameter('refresh_token', RefreshToken);
