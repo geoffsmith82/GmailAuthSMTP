@@ -14,7 +14,13 @@ uses
   Vcl.Forms,
   Vcl.Dialogs,
   Vcl.ExtCtrls,
+  IdSASL,
+  IdSASLCollection,
+  IdExplicitTLSClientServerBase,
   EmailOAuthDm,
+  IdOAuth2Bearer,
+  IdSASLXOAUTH,
+  Email.Demo.Types,
   Globals
   ;
 
@@ -50,6 +56,68 @@ var
 implementation
 
 {$R *.dfm}
+
+const
+  Providers : array[0..2] of TProviderInfo =
+  (
+    (  AuthenticationType : TIdSASLXOAuth;
+       AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth';
+       AccessTokenEndpoint : 'https://accounts.google.com/o/oauth2/token';
+       LogoutEndpoint : 'https://www.google.com/accounts/Logout';
+       ClientID : google_clientid;
+       ClientSecret : google_clientsecret;
+       ClientAccount : google_clientAccount;  // your @gmail.com email address
+       Scopes : 'https://mail.google.com/ openid';
+       SmtpHost : 'smtp.gmail.com';
+       SmtpPort : 465;
+       PopHost : 'pop.gmail.com';
+       PopPort : 995;
+       ImapHost : 'imap.gmail.com';
+       ImapPort : 143;
+       AuthName : 'Google';
+       TLS : utUseImplicitTLS;
+       TwoLinePOPFormat: False
+    ),
+    (  AuthenticationType : TIdSASLXOAuth;
+       AuthorizationEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';//'https://login.live.com/oauth20_authorize.srf';
+       AccessTokenEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';//'https://login.live.com/oauth20_token.srf';
+       LogoutEndpoint : 'https://login.microsoftonline.net/common/oauth2/v2.0/logout';
+       ClientID : microsoft_clientid;
+       ClientSecret : '';
+       ClientAccount : microsoftoffice_clientaccount; // your @live.com or @hotmail.com email address
+       Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
+       //'wl.imap offline_access';
+       SmtpHost : 'smtp-mail.outlook.com';
+       SmtpPort : 587;
+       PopHost : 'smtp-mail.outlook.com';
+       PopPort : 995;
+       ImapHost : 'outlook.office365.com';
+       ImapPort : 993;
+       AuthName : 'Microsoft';
+       TLS : utUseExplicitTLS;
+       TwoLinePOPFormat: True
+    ),
+    (  AuthenticationType : TIdSASLXOAuth;
+       AuthorizationEndpoint : 'https://login.live.com/oauth20_authorize.srf';
+       AccessTokenEndpoint : 'https://login.live.com/oauth20_token.srf';
+       LogoutEndpoint : 'https://login.live.com/logout.srf';
+       ClientID : microsoft_clientid;
+       ClientSecret : '';
+       ClientAccount : microsoft_clientAccount; // your @live.com or @hotmail.com email address
+      // Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
+       Scopes : 'wl.imap wl.emails wl.offline_access';
+       SmtpHost : 'smtp.office365.com';
+       SmtpPort : 587;
+       PopHost : 'outlook.office365.com';
+       PopPort : 995;
+       ImapHost : 'outlook.office365.com';
+       ImapPort : 993;
+       AuthName : 'Hotmail';
+       TLS : utUseExplicitTLS;
+       TwoLinePOPFormat: false
+    )
+  );
+
 
 procedure TForm2.FormDestroy(Sender: TObject);
 begin
@@ -106,6 +174,7 @@ end;
 procedure TForm2.rgEmailProvidersClick(Sender: TObject);
 begin
   EmailOAuthDataModule.SelectedProvider := rgEmailProviders.ItemIndex;
+  EmailOAuthDataModule.Provider := Providers[rgEmailProviders.ItemIndex];
   EmailOAuthDataModule.SetupAuthenticator;
 end;
 

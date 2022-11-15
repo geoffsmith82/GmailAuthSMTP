@@ -32,36 +32,10 @@ uses
   , IdSSLOpenSSL
   , IdIMAP4
   , IdSASL
+  , Email.Demo.Types
   ;
 
 type
-  TAuthType = class of TIdSASL;
-
-  TOnLog = procedure(log: string) of object;
-
-  TProviderInfo = record
-    AuthenticationType : TAuthType;
-    AuthorizationEndpoint : string;
-    AccessTokenEndpoint : string;
-    LogoutEndpoint : string;
-    ClientID : String;
-    ClientSecret : string;
-    ClientAccount : string;
-    Scopes : string;
-    SmtpHost : string;
-    SmtpPort : Integer;
-    PopHost : string;
-    PopPort : Integer;
-    ImapHost : string;
-    ImapPort : Integer;
-    AuthName : string;
-    TLS : TIdUseTLS;
-    TwoLinePOPFormat: Boolean;
-  end;
-
-
-
-
   TEmailOAuthDataModule = class(TDataModule)
     IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL;
     IdPOP3: TIdPOP3;
@@ -88,6 +62,7 @@ type
     { Public declarations }
     OnLog: TOnLog;
     SelectedProvider : Integer;
+    Provider : TProviderInfo;
     function IsAuthenticated: boolean;
     procedure Authenticate;
     procedure ClearAuthentication;
@@ -122,65 +97,6 @@ uses
 const
   clientredirect = 'http://localhost:2132';
 
-  Providers : array[0..2] of TProviderInfo =
-  (
-    (  AuthenticationType : TIdSASLXOAuth;
-       AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth';
-       AccessTokenEndpoint : 'https://accounts.google.com/o/oauth2/token';
-       LogoutEndpoint : 'https://www.google.com/accounts/Logout';
-       ClientID : google_clientid;
-       ClientSecret : google_clientsecret;
-       ClientAccount : google_clientAccount;  // your @gmail.com email address
-       Scopes : 'https://mail.google.com/ openid';
-       SmtpHost : 'smtp.gmail.com';
-       SmtpPort : 465;
-       PopHost : 'pop.gmail.com';
-       PopPort : 995;
-       ImapHost : 'imap.gmail.com';
-       ImapPort : 143;
-       AuthName : 'Google';
-       TLS : utUseImplicitTLS;
-       TwoLinePOPFormat: False
-    ),
-    (  AuthenticationType : TIdSASLXOAuth;
-       AuthorizationEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';//'https://login.live.com/oauth20_authorize.srf';
-       AccessTokenEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';//'https://login.live.com/oauth20_token.srf';
-       LogoutEndpoint : 'https://login.microsoftonline.net/common/oauth2/v2.0/logout';
-       ClientID : microsoft_clientid;
-       ClientSecret : '';
-       ClientAccount : microsoftoffice_clientaccount; // your @live.com or @hotmail.com email address
-       Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
-       //'wl.imap offline_access';
-       SmtpHost : 'smtp-mail.outlook.com';
-       SmtpPort : 587;
-       PopHost : 'smtp-mail.outlook.com';
-       PopPort : 995;
-       ImapHost : 'outlook.office365.com';
-       ImapPort : 993;
-       AuthName : 'Microsoft';
-       TLS : utUseExplicitTLS;
-       TwoLinePOPFormat: True
-    ),
-    (  AuthenticationType : TIdSASLXOAuth;
-       AuthorizationEndpoint : 'https://login.live.com/oauth20_authorize.srf';
-       AccessTokenEndpoint : 'https://login.live.com/oauth20_token.srf';
-       LogoutEndpoint : 'https://login.live.com/logout.srf';
-       ClientID : microsoft_clientid;
-       ClientSecret : '';
-       ClientAccount : microsoft_clientAccount; // your @live.com or @hotmail.com email address
-      // Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
-              Scopes : 'wl.imap wl.offline_access';
-       SmtpHost : 'smtp.office365.com';
-       SmtpPort : 587;
-       PopHost : 'outlook.office365.com';
-       PopPort : 995;
-       ImapHost : 'outlook.office365.com';
-       ImapPort : 993;
-       AuthName : 'Hotmail';
-       TLS : utUseExplicitTLS;
-       TwoLinePOPFormat: True
-    )
-  );
 
 
 
@@ -233,9 +149,10 @@ begin
   end;
   FOAuth2_Enhanced.AuthCode := LCode;
   FOAuth2_Enhanced.ChangeAuthCodeToAccesToken;
-  LTokenName := Providers[SelectedProvider].AuthName + 'Token';
+  LTokenName := Provider.AuthName + 'Token';
   FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
   DoLog('Authenticated via OAUTH2');
+  DoLog(FOAuth2_Enhanced.RefreshToken);
   SetupAuthenticator;
 end;
 
@@ -268,7 +185,7 @@ begin
   // Delete persistent Refresh_token.  Note
   //  - This probably should have a logout function called on it
   //  - The token should be stored in an encrypted way ... but this is just a demo.
-  LTokenName := Providers[SelectedProvider].AuthName + 'Token';
+  LTokenName := Provider.AuthName + 'Token';
   FIniSettings.DeleteKey('Authentication', LTokenName);
   EmailOAuthDataModule.SetupAuthenticator;
 end;
@@ -282,8 +199,8 @@ begin
 
   // if we only have refresh_token or access token has expired
   // request new access_token to use with request
-  FOAuth2_Enhanced.ClientID := Providers[SelectedProvider].ClientID;
-  FOAuth2_Enhanced.ClientSecret := Providers[SelectedProvider].ClientSecret;
+  FOAuth2_Enhanced.ClientID := Provider.ClientID;
+  FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
 
   FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
 
@@ -296,26 +213,26 @@ begin
     Exit;
   end;
 
-  IdSMTP1.Host := Providers[SelectedProvider].SmtpHost;
-  IdSMTP1.UseTLS := Providers[SelectedProvider].TLS;
-  IdSMTP1.Port := Providers[SelectedProvider].SmtpPort;
+  IdSMTP1.Host := Provider.SmtpHost;
+  IdSMTP1.UseTLS := Provider.TLS;
+  IdSMTP1.Port := Provider.SmtpPort;
 
 
 
   xoauthSASL := IdSMTP1.SASLMechanisms.Add;
-  xoauthSASL.SASL := Providers[SelectedProvider].AuthenticationType.Create(nil);
+  xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
   if xoauthSASL.SASL is TIdOAuth2Bearer then
   begin
     TIdOAuth2Bearer(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
     TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdSMTP1.Host;
     TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdSMTP1.Port;
-    TIdOAuth2Bearer(xoauthSASL.SASL).User := Providers[SelectedProvider].ClientAccount;
+    TIdOAuth2Bearer(xoauthSASL.SASL).User := Provider.ClientAccount;
   end
   else if xoauthSASL.SASL is TIdSASLXOAuth then
   begin
     TIdSASLXOAuth(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdSASLXOAuth(xoauthSASL.SASL).User := Providers[SelectedProvider].ClientAccount;
+    TIdSASLXOAuth(xoauthSASL.SASL).User := Provider.ClientAccount;
   end;
   IdSSLIOHandlerSocketSMTP.SSLOptions.SSLVersions := [sslvTLSv1_2];
 
@@ -325,7 +242,7 @@ begin
   IdSMTP1.Authenticate;
 
   IdMessage := TIdMessage.Create(Self);
-  IdMessage.From.Address := Providers[SelectedProvider].ClientAccount;
+  IdMessage.From.Address := Provider.ClientAccount;
   IdMessage.From.Name := clientname;
   IdMessage.ReplyTo.EMailAddresses := IdMessage.From.Address;
   IdMessage.Recipients.Add.Text := clientsendtoaddress;
@@ -349,8 +266,8 @@ begin
 
   // if we only have refresh_token or access token has expired
   // request new access_token to use with request
-  FOAuth2_Enhanced.ClientID := Providers[SelectedProvider].ClientID;
-  FOAuth2_Enhanced.ClientSecret := Providers[SelectedProvider].ClientSecret;
+  FOAuth2_Enhanced.ClientID := Provider.ClientID;
+  FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
   FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
 
   if FOAuth2_Enhanced.AccessToken.Length = 0 then
@@ -359,24 +276,24 @@ begin
     Exit;
   end;
 
-  IdIMAP.Host := Providers[SelectedProvider].ImapHost;
-  IdIMAP.Port := Providers[SelectedProvider].ImapPort;
-  IdIMAP.UseTLS := Providers[SelectedProvider].TLS;
+  IdIMAP.Host := Provider.ImapHost;
+  IdIMAP.Port := Provider.ImapPort;
+  IdIMAP.UseTLS := Provider.TLS;
 
   xoauthSASL := IdIMAP.SASLMechanisms.Add;
-  xoauthSASL.SASL := Providers[SelectedProvider].AuthenticationType.Create(nil);
+  xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
   if xoauthSASL.SASL is TIdOAuth2Bearer then
   begin
     TIdOAuth2Bearer(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
     TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdIMAP.Host;
     TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdIMAP.Port;
-    TIdOAuth2Bearer(xoauthSASL.SASL).User := Providers[SelectedProvider].ClientAccount;
+    TIdOAuth2Bearer(xoauthSASL.SASL).User := Provider.ClientAccount;
   end
   else if xoauthSASL.SASL is TIdSASLXOAuth then
   begin
     TIdSASLXOAuth(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdSASLXOAuth(xoauthSASL.SASL).User := Providers[SelectedProvider].ClientAccount;
+    TIdSASLXOAuth(xoauthSASL.SASL).User := Provider.ClientAccount;
   end;
 
   IdIMAP.AuthType := iatSASL;
@@ -408,8 +325,8 @@ begin
 
   // if we only have refresh_token or access token has expired
   // request new access_token to use with request
-  FOAuth2_Enhanced.ClientID := Providers[SelectedProvider].ClientID;
-  FOAuth2_Enhanced.ClientSecret := Providers[SelectedProvider].ClientSecret;
+  FOAuth2_Enhanced.ClientID := Provider.ClientID;
+  FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
   FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
 
   if FOAuth2_Enhanced.AccessToken.Length = 0 then
@@ -418,25 +335,25 @@ begin
     Exit;
   end;
 
-  IdPOP3.Host := Providers[SelectedProvider].PopHost;
-  IdPOP3.Port := Providers[SelectedProvider].PopPort;
-  IdPOP3.UseTLS := utUseRequireTLS;//Providers[SelectedProvider].TLS;
+  IdPOP3.Host := Provider.PopHost;
+  IdPOP3.Port := Provider.PopPort;
+  IdPOP3.UseTLS := utUseImplicitTLS;//Providers[SelectedProvider].TLS;
 
   xoauthSASL := IdPOP3.SASLMechanisms.Add;
-  xoauthSASL.SASL := Providers[SelectedProvider].AuthenticationType.Create(nil);
+  xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
   if xoauthSASL.SASL is TIdOAuth2Bearer then
   begin
     TIdOAuth2Bearer(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
     TIdOAuth2Bearer(xoauthSASL.SASL).Host := IdPOP3.Host;
     TIdOAuth2Bearer(xoauthSASL.SASL).Port := IdPOP3.Port;
-    TIdOAuth2Bearer(xoauthSASL.SASL).User := Providers[SelectedProvider].ClientAccount;
+    TIdOAuth2Bearer(xoauthSASL.SASL).User := Provider.ClientAccount;
   end
   else if xoauthSASL.SASL is TIdSASLXOAuth then
   begin
     TIdSASLXOAuth(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdSASLXOAuth(xoauthSASL.SASL).User := Providers[SelectedProvider].ClientAccount;
-    TIdSASLXOAuth(xoauthSASL.SASL).TwoLinePopFormat := Providers[SelectedProvider].TwoLinePOPFormat;
+    TIdSASLXOAuth(xoauthSASL.SASL).User := Provider.ClientAccount;
+    TIdSASLXOAuth(xoauthSASL.SASL).TwoLinePopFormat := Provider.TwoLinePOPFormat;
   end;
 
   IdPOP3.AuthType := patSASL;
@@ -456,16 +373,16 @@ procedure TEmailOAuthDataModule.SetupAuthenticator;
 var
   LTokenName : string;
 begin
-  FOAuth2_Enhanced.ClientID := Providers[SelectedProvider].ClientID;
-  FOAuth2_Enhanced.ClientSecret := Providers[SelectedProvider].Clientsecret;
-  FOAuth2_Enhanced.Scope := Providers[SelectedProvider].Scopes;
+  FOAuth2_Enhanced.ClientID := Provider.ClientID;
+  FOAuth2_Enhanced.ClientSecret := Provider.Clientsecret;
+  FOAuth2_Enhanced.Scope := Provider.Scopes;
   FOAuth2_Enhanced.RedirectionEndpoint := clientredirect;
-  FOAuth2_Enhanced.AuthorizationEndpoint := Providers[SelectedProvider].AuthorizationEndpoint;
-  FOAuth2_Enhanced.AccessTokenEndpoint := Providers[SelectedProvider].AccessTokenEndpoint;
+  FOAuth2_Enhanced.AuthorizationEndpoint := Provider.AuthorizationEndpoint;
+  FOAuth2_Enhanced.AccessTokenEndpoint := Provider.AccessTokenEndpoint;
 
-  LTokenName := Providers[SelectedProvider].AuthName + 'Token';
+  LTokenName := Provider.AuthName + 'Token';
   FOAuth2_Enhanced.RefreshToken := FIniSettings.ReadString('Authentication', LTokenName, '');
-  LTokenName := Providers[SelectedProvider].AuthName + 'Token';
+  LTokenName := Provider.AuthName + 'Token';
 end;
 
 end.
