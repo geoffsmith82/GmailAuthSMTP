@@ -31,9 +31,17 @@ type
     AuthName : string;
     TLS : TIdUseTLS;
     TwoLinePOPFormat: Boolean;
+    function TokenName: string;
   end;
 
 
 implementation
+
+{ TProviderInfo }
+
+function TProviderInfo.TokenName: string;
+begin
+  Result := AuthName + 'Token';
+end;
 
 end.

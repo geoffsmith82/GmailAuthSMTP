@@ -177,14 +177,11 @@ begin
 end;
 
 procedure TEmailOAuthDataModule.ClearAuthentication;
-var
-  LTokenName : string;
 begin
   // Delete persistent Refresh_token.  Note
   //  - This probably should have a logout function called on it
   //  - The token should be stored in an encrypted way ... but this is just a demo.
-  LTokenName := Provider.AuthName + 'Token';
-  FIniSettings.DeleteKey('Authentication', LTokenName);
+  FIniSettings.DeleteKey('Authentication', Provider.TokenName);
   SetupAuthenticator;
 end;
 
@@ -339,8 +336,6 @@ begin
 end;
 
 procedure TEmailOAuthDataModule.SetupAuthenticator;
-var
-  LTokenName : string;
 begin
   FOAuth2_Enhanced.ClientID := Provider.ClientID;
   FOAuth2_Enhanced.ClientSecret := Provider.Clientsecret;
@@ -349,8 +344,7 @@ begin
   FOAuth2_Enhanced.AuthorizationEndpoint := Provider.AuthorizationEndpoint;
   FOAuth2_Enhanced.AccessTokenEndpoint := Provider.AccessTokenEndpoint;
 
-  LTokenName := Provider.AuthName + 'Token';
-  FOAuth2_Enhanced.RefreshToken := FIniSettings.ReadString('Authentication', LTokenName, '');
+  FOAuth2_Enhanced.RefreshToken := FIniSettings.ReadString('Authentication', Provider.TokenName, '');
   FOAuth2_Enhanced.AccessToken := '';
   FOAuth2_Enhanced.AccessTokenExpiry := 0;
   IdSMTP1.Disconnect;

@@ -6,6 +6,7 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
   Width = 4000
   object IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL
     Destination = ':110'
+    Intercept = IdConnectionPOP
     MaxLineAction = maException
     Port = 110
     DefaultPort = 0
