@@ -15,6 +15,7 @@ type
     IDToken : string;
     procedure ChangeAuthCodeToAccesToken;
     procedure RefreshAccessTokenIfRequired;
+    function AuthorizationRequestURI: string;
   end;
 
 implementation
@@ -36,6 +37,24 @@ uses
 const
   SClientIDNeeded = 'An ClientID is needed before a token can be requested';
   SRefreshTokenNeeded = 'An Refresh Token is needed before an Access Token can be requested';
+
+function TEnhancedOAuth2Authenticator.AuthorizationRequestURI: string;
+var
+  uri : TURI;
+begin
+  uri := TURI.Create(AuthorizationEndpoint);
+  uri.AddParameter('response_type', OAuth2ResponseTypeToString(ResponseType));
+  if ClientID <> '' then
+    uri.AddParameter('client_id', ClientID);
+  if RedirectionEndpoint <> '' then
+    uri.AddParameter('redirect_uri', RedirectionEndpoint);
+  if Scope <> '' then
+    uri.AddParameter('scope', Scope);
+  if LocalState <> '' then
+    uri.AddParameter('state', LocalState);
+
+  Result := uri.ToString;
+end;
 
 procedure TEnhancedOAuth2Authenticator.RefreshAccessTokenIfRequired;
 begin

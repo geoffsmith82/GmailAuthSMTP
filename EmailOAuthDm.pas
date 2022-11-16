@@ -166,8 +166,6 @@ var
   uri : TURI;
 begin
   uri := TURI.Create(FOAuth2_Enhanced.AuthorizationRequestURI);
-  if SelectedProvider = 0 then
-    uri.AddParameter('access_type', 'offline');  // For Google to get refresh_token
 
   ShellExecute(0,
     'open',

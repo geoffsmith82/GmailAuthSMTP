@@ -61,7 +61,7 @@ const
   Providers : array[0..2] of TProviderInfo =
   (
     (  AuthenticationType : TIdSASLXOAuth;
-       AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth';
+       AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth?access_type=offline';
        AccessTokenEndpoint : 'https://accounts.google.com/o/oauth2/token';
        LogoutEndpoint : 'https://www.google.com/accounts/Logout';
        ClientID : google_clientid;
