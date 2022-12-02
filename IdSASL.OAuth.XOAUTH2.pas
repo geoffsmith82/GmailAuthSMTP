@@ -1,4 +1,4 @@
-unit IdSASLXOAUTH;
+unit IdSASL.OAuth.XOAUTH2;
 
 interface
 
@@ -41,22 +41,15 @@ begin
   inherited;
 end;
 
-function TIdSASLXOAuth.TryStartAuthenticate(const AHost, AProtocolName: String; var VInitialResponse: String): Boolean;
+function TIdSASLXOAuth.TryStartAuthenticate(const AHost, AProtocolName : string; var VInitialResponse: string): Boolean;
 begin
-  if (AProtocolName = 'pop') and FTwoLinePopFormat then
-  begin
-    // Don't send anything yet
-  end
-  else
-  begin
-    VInitialResponse := 'user=' + FUser + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
-  end;
-  Result := True;
+    VInitialResponse := Format('user=%s'#1'auth=Bearer %s'#1#1, [FUser, FToken]); {do not localize}
+    Result := True;
 end;
 
 function TIdSASLXOAuth.StartAuthenticate(const AChallenge, AHost, AProtocolName: string): string;
 begin
-  Result := 'user=' + FUser + Chr($01) + 'auth=Bearer ' + FToken + Chr($01) + Chr($01);
+    Result := Format('user=%s'#1'auth=Bearer %s'#1#1, [FUser, FToken]); {do not localize}
 end;
 
 function TIdSASLXOAuth.ContinueAuthenticate(const ALastResponse, AHost, AProtocolName: string): string;

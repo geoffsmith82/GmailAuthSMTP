@@ -1,4 +1,4 @@
-unit IdOAuth2Bearer;
+unit IdSASL.OAuth.OAuth2Bearer;
 
 interface
 

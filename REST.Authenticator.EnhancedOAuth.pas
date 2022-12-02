@@ -25,8 +25,8 @@ uses
   , System.Net.URLClient
   , System.DateUtils
   , Dialogs
-  , IdSASLXOAUTH
-  , IdOAuth2Bearer
+  , IdSASL.Oauth.XOAUTH2
+  , IdSASL.Oauth.OAuth2Bearer
   , Globals
   , REST.Client
   , REST.Consts

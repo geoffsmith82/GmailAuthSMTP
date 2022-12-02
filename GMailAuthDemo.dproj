@@ -90,13 +90,13 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="Globals.pas"/>
-        <DCCReference Include="IdSASLXOAUTH.pas"/>
+        <DCCReference Include="IdSASL.OAuth.XOAUTH2.pas"/>
         <DCCReference Include="EmailOAuthDm.pas">
             <Form>EmailOAuthDataModule</Form>
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
-        <DCCReference Include="IdOAuth2Bearer.pas"/>
+        <DCCReference Include="IdSASL.OAuth.OAuth2Bearer.pas"/>
         <DCCReference Include="REST.Authenticator.EnhancedOAuth.pas"/>
         <DCCReference Include="Email.Demo.Types.pas"/>
         <DCCReference Include="IdSASL.OAuth.Base.pas"/>

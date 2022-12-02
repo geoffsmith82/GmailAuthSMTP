@@ -18,8 +18,8 @@ uses
   , IdSASLCollection
   , IdExplicitTLSClientServerBase
   , EmailOAuthDm
-  , IdOAuth2Bearer
-  , IdSASLXOAUTH
+  , IdSASL.Oauth.OAuth2Bearer
+  , IdSASL.Oauth.XOAUTH2
   , Email.Demo.Types
   , Globals
   ;
