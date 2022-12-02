@@ -10,19 +10,12 @@ uses
   ;
 
 type
-  TIdSASLXOAuth = class(TIdSASL)
-  private
-    FToken: string;
-    FUser: string;
-    FTwoLinePopFormat: Boolean;
+  TIdSASLXOAuth = class(TIdSASLOAuthBase)
   public
-    property Token: string read FToken write FToken;
-    property User: string read FUser write FUser;
-    property TwoLinePopFormat: Boolean read FTwoLinePopFormat write FTwoLinePopFormat;
     class function ServiceName: TIdSASLServiceName; override;
     constructor Create(AOwner: TComponent);
     destructor Destroy; override;
-    function TryStartAuthenticate(const AHost, AProtocolName : String; var VInitialResponse: String): Boolean; override;
+    function TryStartAuthenticate(const AHost, AProtocolName : string; var VInitialResponse: string): Boolean; override;
     function ContinueAuthenticate(const ALastResponse, AHost, AProtocolName : string): string; override;
     function StartAuthenticate(const AChallenge, AHost, AProtocolName: string): string; override;
     { For cleaning up after Authentication }
