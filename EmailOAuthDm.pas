@@ -58,7 +58,7 @@ type
     FOAuth2_Enhanced : TEnhancedOAuth2Authenticator;
     FIniSettings : TIniFile;
     FIsAuthenticated : Boolean;
-    procedure DoLog(msg: String);
+    procedure DoLog(const msg: String);
   public
     { Public declarations }
     OnLog: TOnLog;
@@ -69,7 +69,7 @@ type
     procedure Authenticate;
     procedure ClearAuthentication;
     procedure SetupAuthenticator;
-    procedure SendMessage(Path: String);
+    procedure SendMessage(const Path: String);
     procedure CheckIMAP;
     procedure CheckPOP;
   end;
@@ -112,7 +112,7 @@ begin
   FreeAndNil(FOAuth2_Enhanced);
 end;
 
-procedure TEmailOAuthDataModule.DoLog(msg: String);
+procedure TEmailOAuthDataModule.DoLog(const msg: String);
 begin
   if Assigned(OnLog) then
     OnLog(msg);
@@ -185,7 +185,7 @@ begin
   SetupAuthenticator;
 end;
 
-procedure TEmailOAuthDataModule.SendMessage(Path: String);
+procedure TEmailOAuthDataModule.SendMessage(const Path: String);
 var
   IdMessage: TIdMessage;
   xoauthSASL : TIdSASLListEntry;

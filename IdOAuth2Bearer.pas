@@ -31,7 +31,7 @@ implementation
 
 constructor TIdOAuth2Bearer.Create(AOwner: TComponent);
 begin
-  inherited;
+  inherited Create(AOwner);
 end;
 
 destructor TIdOAuth2Bearer.Destroy;

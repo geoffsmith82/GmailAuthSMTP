@@ -44,7 +44,7 @@ type
   private
     { Private declarations }
     EmailOAuthDataModule : TEmailOAuthDataModule;
-    procedure LogMsg(msg: string);
+    procedure LogMsg(const msg: string);
   public
     { Public declarations }
     procedure UpdateButtonsEnabled;
@@ -166,7 +166,7 @@ begin
   EmailOAuthDataModule.SendMessage('');
 end;
 
-procedure TForm2.LogMsg(msg: string);
+procedure TForm2.LogMsg(const msg: string);
 begin
   Memo1.Lines.Add(msg);
 end;

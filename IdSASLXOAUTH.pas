@@ -40,7 +40,7 @@ end;
 
 constructor TIdSASLXOAuth.Create(AOwner: TComponent);
 begin
-  inherited;
+  inherited Create(AOwner);
 end;
 
 destructor TIdSASLXOAuth.Destroy;

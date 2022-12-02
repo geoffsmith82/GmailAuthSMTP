@@ -11,7 +11,7 @@ type
 
   TAuthType = class of TIdSASLOAuthBase;
 
-  TOnLog = procedure(log: string) of object;
+  TOnLog = procedure(const log: string) of object;
 
   TProviderInfo = record
     AuthenticationType : TAuthType;
