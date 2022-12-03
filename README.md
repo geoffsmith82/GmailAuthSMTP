@@ -12,6 +12,8 @@ To get these, go to https://console.cloud.google.com/apis/credentials
   * microsoft_clientid
   * microsoft_clientaccount
 To get these, go to https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
+Microsoft will also need various app permissions as shown below
+![](MSPermissions.png)
 
   * clientsendtoaddress
   * clientname
