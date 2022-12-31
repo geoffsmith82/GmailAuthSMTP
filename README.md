@@ -1,4 +1,5 @@
 # GmailAuthSMTP
+![](Images/SMTPServiceLogos.png)
 This project is a very basic demo showing how to authenticate with OAUTH2 and send an email message for [gmail](https://www.gmail.com), [microsoft/office365](https://outlook.office.com/mail/) as well as [hotmail.com/outlook.com/live.com](https://www.outlook.com) email addresses.
 ![](Images/SampleIMAPSession.png)
 ## Google Setup
