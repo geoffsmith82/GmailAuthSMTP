@@ -1,6 +1,6 @@
 # GmailAuthSMTP
 ![](Images/SMTPServiceLogos.png)
-This project is a very basic demo showing how to authenticate with OAUTH2 and send an email message for [gmail](https://www.gmail.com), [microsoft/office365](https://outlook.office.com/mail/) as well as [hotmail.com/outlook.com/live.com](https://www.outlook.com) email addresses.
+This project is a very basic demo showing how to authenticate with OAUTH2 and send an email message for [gmail](https://www.gmail.com), [microsoft/office365](https://outlook.office.com/mail/) as well as [hotmail.com/outlook.com/live.com](https://www.outlook.com) email addresses.  Initially it was only for Gmail (hence the name), but has since been extended to support other other providers.
 
 OAuth2 is an open standard for authorization that is used to grant access to resources protected by a server. It allows an application or service to authenticate with a resource server and access protected resources on behalf of a user, without requiring the user to provide their credentials directly to the application.
 
