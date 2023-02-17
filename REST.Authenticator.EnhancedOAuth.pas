@@ -27,7 +27,6 @@ uses
   , Dialogs
   , IdSASL.Oauth.XOAUTH2
   , IdSASL.Oauth.OAuth2Bearer
-  , Globals
   , REST.Client
   , REST.Consts
   , REST.Types

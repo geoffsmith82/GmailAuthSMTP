@@ -69,7 +69,7 @@ type
     procedure Authenticate;
     procedure ClearAuthentication;
     procedure SetupAuthenticator;
-    procedure SendMessage(const Path: String);
+    procedure SendMessage(const destAddress: string; const Path: String);
     procedure CheckIMAP;
     procedure CheckPOP;
   end;
@@ -88,7 +88,6 @@ uses
   , System.Net.URLClient
   , System.DateUtils
   , Dialogs
-  , Globals
   , REST.Client
   , REST.Consts
   , REST.Types
@@ -185,7 +184,7 @@ begin
   SetupAuthenticator;
 end;
 
-procedure TEmailOAuthDataModule.SendMessage(const Path: String);
+procedure TEmailOAuthDataModule.SendMessage(const destAddress: string; const Path: String);
 var
   IdMessage: TIdMessage;
   xoauthSASL : TIdSASLListEntry;
@@ -225,9 +224,9 @@ begin
 
   IdMessage := TIdMessage.Create(Self);
   IdMessage.From.Address := Provider.ClientAccount;
-  IdMessage.From.Name := clientname;
+  IdMessage.From.Name := Provider.ClientName;
   IdMessage.ReplyTo.EMailAddresses := IdMessage.From.Address;
-  IdMessage.Recipients.Add.Text := clientsendtoaddress;
+  IdMessage.Recipients.Add.Text := destAddress;
   IdMessage.Subject := 'Hello World';
   IdMessage.Body.Text := 'Hello Body';
 

@@ -3,7 +3,7 @@ program GMailAuthDemo;
 uses
   Vcl.Forms,
   Unit2 in 'Unit2.pas' {Form2},
-  Globals in 'Globals.pas',
+  Globals in 'Globals.pas',  // rename from globals.sample.pas and update contents if missing
   IdSASL.OAuth.XOAUTH2 in 'IdSASL.OAuth.XOAUTH2.pas',
   EmailOAuthDm in 'EmailOAuthDm.pas' {EmailOAuthDataModule: TDataModule},
   IdSASL.OAuth.OAuth2Bearer in 'IdSASL.OAuth.OAuth2Bearer.pas',

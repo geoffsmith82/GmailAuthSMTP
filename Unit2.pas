@@ -21,7 +21,7 @@ uses
   , IdSASL.Oauth.OAuth2Bearer
   , IdSASL.Oauth.XOAUTH2
   , Email.Demo.Types
-  , Globals
+  , Globals  // rename from globals.sample.pas and update contents if missing
   ;
 
 type
@@ -58,7 +58,7 @@ implementation
 {$R *.dfm}
 
 const
-  Providers : array[0..2] of TProviderInfo =
+  Providers : array[0..3] of TProviderInfo =
   (
     (  AuthenticationType : TIdSASLXOAuth;
        AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth?access_type=offline';
@@ -67,6 +67,7 @@ const
        ClientID : google_clientid;
        ClientSecret : google_clientsecret;
        ClientAccount : google_clientAccount;  // your @gmail.com email address
+       ClientName : clientname;
        Scopes : 'https://mail.google.com/ openid';
        SmtpHost : 'smtp.gmail.com';
        SmtpPort : 465;
@@ -85,6 +86,7 @@ const
        ClientID : microsoft_clientid;
        ClientSecret : '';
        ClientAccount : microsoftoffice_clientaccount; // your @live.com or @hotmail.com email address
+       ClientName : clientname;
        Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
        //'wl.imap offline_access';
        SmtpHost : 'smtp-mail.outlook.com';
@@ -105,6 +107,7 @@ const
        ClientSecret : '';
        ClientAccount : microsoft_clientAccount; // your @live.com or @hotmail.com email address
       // Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
+       ClientName : clientname;
        Scopes : 'wl.imap wl.emails wl.offline_access';
        SmtpHost : 'smtp.office365.com';
        SmtpPort : 587;
@@ -113,6 +116,26 @@ const
        ImapHost : 'outlook.office365.com';
        ImapPort : 993;
        AuthName : 'Hotmail';
+       TLS : utUseExplicitTLS;
+       TwoLinePOPFormat: false
+    ),
+    (  AuthenticationType : TIdOAuth2Bearer;
+       AuthorizationEndpoint : 'https://api.login.yahoo.com/oauth2/request_auth';
+       AccessTokenEndpoint : 'https://api.login.yahoo.com/oauth2/get_token';
+       LogoutEndpoint : '';
+       ClientID : yahoo_clientid;
+       ClientSecret : yahoo_clintsecret;
+       ClientAccount : 'geoff_smith82@yahoo.com'; // your @live.com or @hotmail.com email address
+      // Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
+       ClientName : clientname;
+       Scopes : 'email mail-r mail-w';
+       SmtpHost : 'smtp.mail.yahoo.com';
+       SmtpPort : 465;
+       PopHost : '';
+       PopPort : 995;
+       ImapHost : 'imap.mail.yahoo.com';
+       ImapPort : 993;
+       AuthName : 'Yahoo';
        TLS : utUseExplicitTLS;
        TwoLinePOPFormat: false
     )
@@ -163,7 +186,7 @@ end;
 
 procedure TForm2.btnSendMsgClick(Sender: TObject);
 begin
-  EmailOAuthDataModule.SendMessage('');
+  EmailOAuthDataModule.SendMessage(clientsendtoaddress, '');
 end;
 
 procedure TForm2.LogMsg(const msg: string);

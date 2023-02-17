@@ -21,6 +21,7 @@ type
     ClientID : String;
     ClientSecret : string;
     ClientAccount : string;
+    ClientName : string;
     Scopes : string;
     SmtpHost : string;
     SmtpPort : Integer;
