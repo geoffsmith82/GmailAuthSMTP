@@ -82,7 +82,7 @@ const
     (  AuthenticationType : TIdSASLXOAuth;
        AuthorizationEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';//'https://login.live.com/oauth20_authorize.srf';
        AccessTokenEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';//'https://login.live.com/oauth20_token.srf';
-       LogoutEndpoint : 'https://login.microsoftonline.net/common/oauth2/v2.0/logout';
+       LogoutEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/logout';
        ClientID : microsoft_clientid;
        ClientSecret : '';
        ClientAccount : microsoftoffice_clientaccount; // your @live.com or @hotmail.com email address
