@@ -13,7 +13,7 @@ type
 
   TOnLog = procedure(const log: string) of object;
 
-  TProviderInfo = record
+  TMailProviderInfo = record
     AuthenticationType : TAuthType;
     AuthorizationEndpoint : string;
     AccessTokenEndpoint : string;
@@ -40,7 +40,7 @@ implementation
 
 { TProviderInfo }
 
-function TProviderInfo.TokenName: string;
+function TMailProviderInfo.TokenName: string;
 begin
   Result := AuthName + 'Token';
 end;

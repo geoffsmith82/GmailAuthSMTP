@@ -34,6 +34,7 @@ uses
   , IdSASL
   , IdSASL.OAuth.Base
   , Email.Demo.Types
+  , windows
   ;
 
 type
@@ -59,11 +60,14 @@ type
     FIniSettings : TIniFile;
     FIsAuthenticated : Boolean;
     procedure DoLog(const msg: String);
+    procedure ForceForegroundNoActivate(hWnd: THandle);
   public
     { Public declarations }
     OnLog: TOnLog;
+    HWNDHandle : HWND;
+    AppHandle : HWND;
     SelectedProvider : Integer;
-    Provider : TProviderInfo;
+    Provider : TMailProviderInfo;
     function IsAuthenticated: Boolean;
     function HasRefreshToken: Boolean;
     procedure Authenticate;
@@ -95,6 +99,15 @@ uses
 
 const
   clientredirect = 'http://localhost:2132';
+
+procedure TEmailOAuthDataModule.ForceForegroundNoActivate(hWnd : THandle);
+
+begin
+ if IsIconic(AppHandle) then
+  ShowWindow(AppHandle, SW_SHOWNOACTIVATE);
+ SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE or SWP_NOACTIVATE or SWP_NOMOVE);
+ SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE or SWP_NOACTIVATE or SWP_NOMOVE);
+end;
 
 procedure TEmailOAuthDataModule.DataModuleCreate(Sender: TObject);
 var
@@ -153,6 +166,8 @@ begin
   DoLog('Authenticated via OAUTH2');
   DoLog(FOAuth2_Enhanced.RefreshToken);
   SetupAuthenticator;
+  AResponseInfo.ContentText := '<html><body>Successfully Authenticated. You can now close this tab/window.</body></html>';
+  ForceForegroundNoActivate(HWNDHandle);
 end;
 
 function TEmailOAuthDataModule.IsAuthenticated: boolean;

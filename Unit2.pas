@@ -58,7 +58,7 @@ implementation
 {$R *.dfm}
 
 const
-  Providers : array[0..3] of TProviderInfo =
+  Providers : array[0..3] of TMailProviderInfo =
   (
     (  AuthenticationType : TIdSASLXOAuth;
        AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth?access_type=offline';
@@ -150,6 +150,8 @@ procedure TForm2.FormCreate(Sender: TObject);
 begin
   EmailOAuthDataModule := TEmailOAuthDataModule.Create(nil);
   EmailOAuthDataModule.OnLog := LogMsg;
+  EmailOAuthDataModule.HWNDHandle := Self.Handle;
+  EmailOAuthDataModule.AppHandle := Application.Handle;
   EmailOAuthDataModule.Provider := Providers[rgEmailProviders.ItemIndex];
   EmailOAuthDataModule.SetupAuthenticator;
   UpdateButtonsEnabled;
