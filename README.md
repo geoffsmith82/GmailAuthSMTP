@@ -30,6 +30,9 @@ Microsoft will also need various app permissions as shown below
   * clientsendtoaddress
   * clientname
 
+## Dependencies
+This project requires OpenSSL.  You can find the required files at https://github.com/IndySockets/OpenSSL-Binaries
+
 
 Thanks
 
