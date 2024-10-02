@@ -21,7 +21,7 @@ uses
   , IdSASL.Oauth.OAuth2Bearer
   , IdSASL.Oauth.XOAUTH2
   , Email.Demo.Types
-  , Globals  // rename from globals.sample.pas and update contents if missing
+  , Globals.sample  // rename from globals.sample.pas and update contents if missing
   ;
 
 type
@@ -125,7 +125,7 @@ const
        LogoutEndpoint : '';
        ClientID : yahoo_clientid;
        ClientSecret : yahoo_clintsecret;
-       ClientAccount : 'geoff_smith82@yahoo.com'; // your @live.com or @hotmail.com email address
+       ClientAccount : yahoo_clientAccount ;// your @live.com or @hotmail.com email address
       // Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
        ClientName : clientname;
        Scopes : 'email mail-r mail-w';
@@ -187,8 +187,16 @@ begin
 end;
 
 procedure TForm2.btnSendMsgClick(Sender: TObject);
+var
+filesToAttach: array of string;
 begin
-  EmailOAuthDataModule.SendMessage(clientsendtoaddress, '');
+  SetLength(filesToAttach, 2); // Sets the size of the array
+  filesToAttach[0] := 'C:\Temp\text.pdf';
+  filesToAttach[1] := 'C:\Temp\text.txt';
+
+  EmailOAuthDataModule.SendMessage('Subjet text' , 'message text', clientsendtoaddress, '', filesToAttach);
+
+ // EmailOAuthDataModule.SendMessage(clientsendtoaddress, '');
 end;
 
 procedure TForm2.LogMsg(const msg: string);

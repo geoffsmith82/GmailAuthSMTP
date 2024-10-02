@@ -1,5 +1,4 @@
 object EmailOAuthDataModule: TEmailOAuthDataModule
-  OldCreateOrder = True
   OnCreate = DataModuleCreate
   OnDestroy = DataModuleDestroy
   Height = 3000
