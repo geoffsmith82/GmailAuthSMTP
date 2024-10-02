@@ -22,6 +22,7 @@ uses
   , IdSASLCollection
   , IdMessage
   , IdMessageClient
+  , IdAttachmentFile
   , IdPOP3
   , IdBaseComponent
   , IdComponent
@@ -35,6 +36,7 @@ uses
   , IdSASL.OAuth.Base
   , Email.Demo.Types
   , windows
+
   ;
 
 type
@@ -73,7 +75,7 @@ type
     procedure Authenticate;
     procedure ClearAuthentication;
     procedure SetupAuthenticator;
-    procedure SendMessage(const destAddress: string; const Path: String);
+    procedure SendMessage(const Subject : string ; const Body : string ; const destAddress: string; const Path: String; const attachmentFiles: array of string);
     procedure CheckIMAP;
     procedure CheckPOP;
   end;
@@ -199,10 +201,11 @@ begin
   SetupAuthenticator;
 end;
 
-procedure TEmailOAuthDataModule.SendMessage(const destAddress: string; const Path: String);
+procedure TEmailOAuthDataModule.SendMessage(const Subject : string ; const Body : string ; const destAddress: string; const Path: String; const attachmentFiles: array of string);
 var
   IdMessage: TIdMessage;
   xoauthSASL : TIdSASLListEntry;
+  i: Integer;
 begin
   // if we only have refresh_token or access token has expired
   // request new access_token to use with request
@@ -242,8 +245,14 @@ begin
   IdMessage.From.Name := Provider.ClientName;
   IdMessage.ReplyTo.EMailAddresses := IdMessage.From.Address;
   IdMessage.Recipients.Add.Text := destAddress;
-  IdMessage.Subject := 'Hello World';
-  IdMessage.Body.Text := 'Hello Body';
+  IdMessage.Subject     := Subject;
+  IdMessage.Body.Text   := Body;
+  for i := Low(attachmentFiles) to High(attachmentFiles) do
+  begin
+    if FileExists(attachmentFiles[i]) then
+    TIdAttachmentFile.Create(IdMessage.MessageParts, attachmentFiles[i])
+  end;
+
 
   IdSMTP1.Send(IdMessage);
   IdSMTP1.Disconnect;
