@@ -5,6 +5,7 @@ interface
 uses
     System.SysUtils
   , System.Classes
+  , System.JSON
   , Winapi.ShellAPI
   , IniFiles
   , REST.Authenticator.EnhancedOAuth
@@ -21,7 +22,11 @@ uses
   , IdExplicitTLSClientServerBase
   , IdSASLCollection
   , IdMessage
+  , IdText
+  , IdMessageParts
+  , IdAttachmentFile
   , IdMessageClient
+  , IdEMailAddress
   , IdPOP3
   , IdBaseComponent
   , IdComponent
@@ -35,6 +40,10 @@ uses
   , IdSASL.OAuth.Base
   , Email.Demo.Types
   , windows
+  , REST.Types
+  , REST.Client
+  , Data.Bind.Components
+  , Data.Bind.ObjectScope
   ;
 
 type
@@ -49,6 +58,9 @@ type
     IdConnectionPOP: TIdConnectionIntercept;
     IdIMAP: TIdIMAP4;
     IdSSLIOHandlerSocketIMAP: TIdSSLIOHandlerSocketOpenSSL;
+    RESTResponseGraph: TRESTResponse;
+    RESTRequestGraph: TRESTRequest;
+    RESTClientGraph: TRESTClient;
     procedure DataModuleDestroy(Sender: TObject);
     procedure DataModuleCreate(Sender: TObject);
     procedure IdConnectionReceive(ASender: TIdConnectionIntercept; var ABuffer: TIdBytes);
@@ -63,6 +75,7 @@ type
     procedure ForceForegroundNoActivate(hWnd: THandle);
   public
     { Public declarations }
+    SendAddress : string;
     OnLog: TOnLog;
     HWNDHandle : HWND;
     AppHandle : HWND;
@@ -73,7 +86,30 @@ type
     procedure Authenticate;
     procedure ClearAuthentication;
     procedure SetupAuthenticator;
-    procedure SendMessage(const destAddress: string; const Path: String);
+    function ReadString(const Ident, Default: string): string;
+    procedure WriteString(const Ident, Value: String);
+    procedure SendMessage(const fromAddress: string;
+                          const fromName:string;
+                          const recepientAddress: string;
+                          const recepientName: string;
+                          const subject: string;
+                          const body: string;
+                          const Path: String);
+    function SendEmailUsingREST(const fromAddress: string;
+                          const fromName: string;
+                          const recepientAddress: string;
+                          const recepientName: string;
+                          const subject: string;
+                          const body: string;
+                          const Path: string): Boolean;
+    procedure SendEmailWithAttachment(
+                          const FromAddress,
+                          ToAddress,
+                          SubjectText: string;
+                          const PlainBody,
+                          HtmlBody: string;
+                          const InlineImagePaths: array of string;
+                          const AttachmentPath: string);
     procedure CheckIMAP;
     procedure CheckPOP;
   end;
@@ -92,9 +128,7 @@ uses
   , System.Net.URLClient
   , System.DateUtils
   , Dialogs
-  , REST.Client
   , REST.Consts
-  , REST.Types
   ;
 
 const
@@ -163,9 +197,15 @@ begin
   FOAuth2_Enhanced.ChangeAuthCodeToAccesToken;
   LTokenName := Provider.AuthName + 'Token';
   FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
+  var jwt := TJWT.Create(FOAuth2_Enhanced.IDToken);
+  if jwt.Payload.ContainsKey('email') then
+  begin
+    FIniSettings.WriteString('Authentication', LTokenName + 'Email', jwt.Payload.GetValue('email'));
+    SendAddress := jwt.Payload.GetValue('email');
+  end;
+
   DoLog('Authenticated via OAUTH2');
   DoLog(FOAuth2_Enhanced.RefreshToken);
-  SetupAuthenticator;
   AResponseInfo.ContentText := '<html><body>Successfully Authenticated. You can now close this tab/window.</body></html>';
   ForceForegroundNoActivate(HWNDHandle);
 end;
@@ -173,6 +213,11 @@ end;
 function TEmailOAuthDataModule.IsAuthenticated: boolean;
 begin
   Result := FIsAuthenticated;
+end;
+
+function TEmailOAuthDataModule.ReadString(const Ident, Default: string): string;
+begin
+  Result := FIniSettings.ReadString('Authentication', Ident, '');
 end;
 
 procedure TEmailOAuthDataModule.Authenticate;
@@ -199,10 +244,81 @@ begin
   SetupAuthenticator;
 end;
 
-procedure TEmailOAuthDataModule.SendMessage(const destAddress: string; const Path: String);
+function TEmailOAuthDataModule.SendEmailUsingREST(const fromAddress: string;
+                                const fromName: string;
+                                const recepientAddress: string;
+                                const recepientName: string;
+                                const subject: string;
+                                const body: string;
+                                const Path: string): Boolean;
+var
+  JSONBody: TJSONObject;
+  MessageObj, BodyObj, FromObj, RecipientObj, EmailAddrObj: TJSONObject;
+  ToRecipientsArr: TJSONArray;
+begin
+  JSONBody := nil;
+  MessageObj := nil;
+  BodyObj := nil;
+  FromObj := nil;
+  RecipientObj := nil;
+  EmailAddrObj := nil;
+  ToRecipientsArr := nil;
+  RESTRequestGraph.ResetToDefaults;
+  FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
+  RESTRequestGraph.Client.Authenticator := FOAuth2_Enhanced;
+  try
+    MessageObj := TJSONObject.Create;
+    BodyObj := TJSONObject.Create;
+    FromObj := TJSONObject.Create;
+    RecipientObj := TJSONObject.Create;
+    EmailAddrObj := TJSONObject.Create;
+    ToRecipientsArr := TJSONArray.Create;
+
+    BodyObj.AddPair('contentType', 'HTML');
+    BodyObj.AddPair('content', Body);
+
+    EmailAddrObj.AddPair('address', fromAddress);
+    EmailAddrObj.AddPair('name', fromName);
+
+    FromObj.AddPair('emailAddress', EmailAddrObj);
+
+    RecipientObj.AddPair('emailAddress', TJSONObject.Create.AddPair('address', recepientAddress));
+
+    ToRecipientsArr.Add(RecipientObj);
+    MessageObj.AddPair('subject', Subject);
+    MessageObj.AddPair('body', BodyObj);
+    MessageObj.AddPair('from', FromObj);
+    MessageObj.AddPair('toRecipients', ToRecipientsArr);
+    JSONBody := TJSONObject.Create;
+    JSONBody.AddPair('message', MessageObj);
+    RESTRequestGraph.Resource := 'me/sendMail';
+    RESTRequestGraph.Method := TRESTRequestMethod.rmPOST;
+    RESTRequestGraph.AddBody(JSONBody.ToString, TRESTContentType.ctAPPLICATION_JSON);
+    try
+      RESTRequestGraph.Execute;
+      Result := RESTResponseGraph.StatusCode = 202;
+    except
+      on E: Exception do
+      begin
+        ShowMessage('Error: ' + E.Message);
+        Result := False;
+      end;
+    end;
+  finally
+    FreeAndNil(JSONBody);
+  end;
+end;
+
+procedure TEmailOAuthDataModule.SendMessage(const fromAddress: string; const fromName:string;
+                const recepientAddress: string; const recepientName: string; const subject: string;
+                const body: string;
+                const Path: String);
 var
   IdMessage: TIdMessage;
   xoauthSASL : TIdSASLListEntry;
+  oldRefreshToken : string;
+  LTokenName : string;
+  recepient: TIdEMailAddressItem;
 begin
   // if we only have refresh_token or access token has expired
   // request new access_token to use with request
@@ -210,6 +326,11 @@ begin
   FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
 
   FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
+  if (oldRefreshToken <> FOAuth2_Enhanced.RefreshToken) and (not FOAuth2_Enhanced.RefreshToken.IsEmpty) then
+  begin
+    LTokenName := Provider.AuthName + 'Token';
+    FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
+  end;
 
   DoLog('refresh_token=' + FOAuth2_Enhanced.RefreshToken);
   DoLog('access_token=' + FOAuth2_Enhanced.AccessToken);
@@ -228,7 +349,7 @@ begin
   xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
   TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-  TIdSASLOAuthBase(xoauthSASL.SASL).User := Provider.ClientAccount;
+  TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
 
   IdSSLIOHandlerSocketSMTP.SSLOptions.SSLVersions := [sslvTLSv1_2];
 
@@ -238,16 +359,99 @@ begin
   IdSMTP1.Authenticate;
 
   IdMessage := TIdMessage.Create(Self);
-  IdMessage.From.Address := Provider.ClientAccount;
-  IdMessage.From.Name := Provider.ClientName;
+  IdMessage.From.Address := fromAddress;
+  IdMessage.From.Name := fromName;
   IdMessage.ReplyTo.EMailAddresses := IdMessage.From.Address;
-  IdMessage.Recipients.Add.Text := destAddress;
-  IdMessage.Subject := 'Hello World';
-  IdMessage.Body.Text := 'Hello Body';
+  recepient := IdMessage.Recipients.Add;
+  recepient.Name := recepientName;
+  recepient.Address := recepientAddress;
+  IdMessage.Subject := subject;
+  IdMessage.Body.Text := body;
 
   IdSMTP1.Send(IdMessage);
   IdSMTP1.Disconnect;
   ShowMessage('Message Sent');
+end;
+procedure TEmailOAuthDataModule.SendEmailWithAttachment(
+  const FromAddress, ToAddress, SubjectText: string;
+  const PlainBody, HtmlBody: string;
+  const InlineImagePaths: array of string; const AttachmentPath: string);
+var
+  xoauthSASL : TIdSASLListEntry;
+  Email: TIdMessage;
+  PlainTextPart, HTMLPart: TIdText;
+  InnerPart: TIdMessageParts;
+  ImageAttachment: TIdAttachmentFile;
+  FileAttachment: TIdAttachmentFile;
+  ContentIdList: TArray<string>;
+  i: Integer;
+  oldRefreshToken : string;
+  LTokenName : string;
+begin
+  Email := TIdMessage.Create(nil);
+  try
+    // Configure SMTP
+    // if we only have refresh_token or access token has expired
+    // request new access_token to use with request
+    FOAuth2_Enhanced.ClientID := Provider.ClientID;
+    FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
+    FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
+    if (oldRefreshToken <> FOAuth2_Enhanced.RefreshToken) and (not FOAuth2_Enhanced.RefreshToken.IsEmpty) then
+    begin
+      LTokenName := Provider.AuthName + 'Token';
+      FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
+    end;
+    DoLog('refresh_token=' + FOAuth2_Enhanced.RefreshToken);
+    DoLog('access_token=' + FOAuth2_Enhanced.AccessToken);
+    if FOAuth2_Enhanced.AccessToken.Length = 0 then
+    begin
+      DoLog('Failed to authenticate properly');
+      Exit;
+    end;
+    IdSMTP1.Host := Provider.SmtpHost;
+    IdSMTP1.UseTLS := Provider.TLS;
+    IdSMTP1.Port := Provider.SmtpPort;
+    xoauthSASL := IdSMTP1.SASLMechanisms.Add;
+    xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
+    TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
+    TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
+    IdSSLIOHandlerSocketSMTP.SSLOptions.SSLVersions := [sslvTLSv1_2];
+    IdSMTP1.Connect;
+    IdSMTP1.AuthType := satSASL;
+    IdSMTP1.Authenticate;
+    Email.From.Address := FromAddress;
+    Email.Recipients.EmailAddresses := ToAddress;
+    Email.Subject := SubjectText;
+    Email.ContentType := 'multipart/mixed';
+    PlainTextPart := TIdText.Create(Email.MessageParts, nil);
+    PlainTextPart.ContentType := 'text/plain; charset=UTF-8';
+    PlainTextPart.Body.Text := PlainBody;
+    InnerPart := TIdMessageParts.Create(Email.MessageParts);
+    HTMLPart := TIdText.Create(InnerPart, nil);
+    HTMLPart.ContentType := 'text/html; charset=UTF-8';
+    HTMLPart.Body.Text := HtmlBody;
+    SetLength(ContentIdList, Length(InlineImagePaths));
+    for i := Low(InlineImagePaths) to High(InlineImagePaths) do
+    begin
+      ContentIdList[i] := Format('cid:image%d@domain.com', [i]);
+      ImageAttachment := TIdAttachmentFile.Create(InnerPart, InlineImagePaths[i]);
+      ImageAttachment.ContentID := ContentIdList[i];
+      ImageAttachment.ContentDisposition := 'inline';
+    end;
+    for i := Low(ContentIdList) to High(ContentIdList) do
+      HTMLPart.Body.Text := StringReplace(HTMLPart.Body.Text,
+        Format('{img%d}', [i]), Format('cid:%s', [ContentIdList[i]]), [rfReplaceAll]);
+    FileAttachment := TIdAttachmentFile.Create(Email.MessageParts, AttachmentPath);
+    FileAttachment.ContentDisposition := 'attachment';
+    IdSMTP1.Connect;
+    try
+      IdSMTP1.Send(Email);
+    finally
+      IdSMTP1.Disconnect;
+    end;
+  finally
+    Email.Free;
+  end;
 end;
 
 procedure TEmailOAuthDataModule.CheckIMAP;
@@ -255,6 +459,8 @@ var
   xoauthSASL : TIdSASLListEntry;
   msgCount : Integer;
   mailboxes : TStringList;
+  oldRefreshToken : string;
+  LTokenName : string;
 begin
   DoLog('refresh_token=' + FOAuth2_Enhanced.RefreshToken);
   DoLog('access_token=' + FOAuth2_Enhanced.AccessToken);
@@ -263,7 +469,13 @@ begin
   // request new access_token to use with request
   FOAuth2_Enhanced.ClientID := Provider.ClientID;
   FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
+  oldRefreshToken := FOAuth2_Enhanced.RefreshToken;
   FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
+  if (oldRefreshToken <> FOAuth2_Enhanced.RefreshToken) and (not FOAuth2_Enhanced.RefreshToken.IsEmpty) then
+  begin
+    LTokenName := Provider.AuthName + 'Token';
+    FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
+  end;
 
   if FOAuth2_Enhanced.AccessToken.Length = 0 then
   begin
@@ -279,7 +491,7 @@ begin
   xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
   TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-  TIdSASLOAuthBase(xoauthSASL.SASL).User := Provider.ClientAccount;
+  TIdSASLOAuthBase(xoauthSASL.SASL).User := SendAddress;
 
   IdIMAP.AuthType := iatSASL;
   IdIMAP.Connect;
@@ -333,7 +545,7 @@ begin
   xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
   TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-  TIdSASLOAuthBase(xoauthSASL.SASL).User := Provider.ClientAccount;
+  TIdSASLOAuthBase(xoauthSASL.SASL).User := SendAddress;
 
   IdPOP3.AuthType := patSASL;
   IdPOP3.UseTLS := utUseImplicitTLS;
@@ -359,11 +571,19 @@ begin
   FOAuth2_Enhanced.AccessTokenEndpoint := Provider.AccessTokenEndpoint;
 
   FOAuth2_Enhanced.RefreshToken := FIniSettings.ReadString('Authentication', Provider.TokenName, '');
+  SendAddress := FIniSettings.ReadString('Authentication', Provider.TokenName + 'Email', '');
+
+
   FOAuth2_Enhanced.AccessToken := '';
   FOAuth2_Enhanced.AccessTokenExpiry := 0;
   IdSMTP1.Disconnect;
   IdPOP3.Disconnect;
   IdIMAP.Disconnect;
+end;
+
+procedure TEmailOAuthDataModule.WriteString(const Ident, Value: String);
+begin
+  FIniSettings.WriteString('Authentication', Ident, Value);
 end;
 
 end.

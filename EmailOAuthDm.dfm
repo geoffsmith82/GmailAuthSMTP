@@ -1,9 +1,9 @@
 object EmailOAuthDataModule: TEmailOAuthDataModule
-  OldCreateOrder = True
   OnCreate = DataModuleCreate
   OnDestroy = DataModuleDestroy
-  Height = 3000
-  Width = 4000
+  Height = 1064
+  Width = 1762
+  PixelsPerInch = 240
   object IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL
     Destination = ':110'
     Intercept = IdConnectionPOP
@@ -15,8 +15,8 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
-    Left = 632
-    Top = 248
+    Left = 1504
+    Top = 304
   end
   object IdPOP3: TIdPOP3
     Intercept = IdConnectionPOP
@@ -24,8 +24,8 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     AuthType = patSASL
     AutoLogin = False
     SASLMechanisms = <>
-    Left = 624
-    Top = 440
+    Left = 1496
+    Top = 104
   end
   object IdSMTP1: TIdSMTP
     Intercept = IdConnectionInterceptSMTP
@@ -33,14 +33,14 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     AuthType = satSASL
     SASLMechanisms = <>
     UseTLS = utUseRequireTLS
-    Left = 184
-    Top = 448
+    Left = 216
+    Top = 616
   end
   object IdConnectionInterceptSMTP: TIdConnectionIntercept
     OnReceive = IdConnectionReceive
     OnSend = IdConnectionSend
-    Left = 176
-    Top = 80
+    Left = 224
+    Top = 104
   end
   object IdSSLIOHandlerSocketSMTP: TIdSSLIOHandlerSocketOpenSSL
     Destination = ':25'
@@ -53,27 +53,27 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
-    Left = 176
-    Top = 264
+    Left = 216
+    Top = 360
   end
   object IdHTTPServer1: TIdHTTPServer
     Bindings = <>
     DefaultPort = 2132
     OnCommandGet = IdHTTPServer1CommandGet
-    Left = 1464
-    Top = 80
+    Left = 832
+    Top = 752
   end
   object IdConnectionInterceptIMAP: TIdConnectionIntercept
     OnReceive = IdConnectionReceive
     OnSend = IdConnectionSend
-    Left = 1096
-    Top = 72
+    Left = 1040
+    Top = 520
   end
   object IdConnectionPOP: TIdConnectionIntercept
     OnReceive = IdConnectionReceive
     OnSend = IdConnectionSend
-    Left = 640
-    Top = 80
+    Left = 1512
+    Top = 504
   end
   object IdIMAP: TIdIMAP4
     Intercept = IdConnectionInterceptIMAP
@@ -82,8 +82,8 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     SASLMechanisms = <>
     AuthType = iatSASL
     MilliSecsToWaitToClearBuffer = 10
-    Left = 1088
-    Top = 440
+    Left = 1040
+    Top = 96
   end
   object IdSSLIOHandlerSocketIMAP: TIdSSLIOHandlerSocketOpenSSL
     Destination = ':143'
@@ -96,7 +96,26 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
-    Left = 1088
-    Top = 236
+    Left = 1048
+    Top = 312
+  end
+  object RESTResponseGraph: TRESTResponse
+    Left = 664
+    Top = 528
+  end
+  object RESTRequestGraph: TRESTRequest
+    Client = RESTClientGraph
+    Params = <>
+    Response = RESTResponseGraph
+    SynchronizedEvents = False
+    Left = 664
+    Top = 312
+  end
+  object RESTClientGraph: TRESTClient
+    BaseURL = 'https://graph.microsoft.com/v1.0'
+    Params = <>
+    SynchronizedEvents = False
+    Left = 656
+    Top = 104
   end
 end

@@ -14,6 +14,7 @@ uses
   , Vcl.Forms
   , Vcl.Dialogs
   , Vcl.ExtCtrls
+  , Vcl.ComCtrls
   , IdSASL
   , IdSASLCollection
   , IdExplicitTLSClientServerBase
@@ -32,7 +33,22 @@ type
     btnCheckMsg: TButton;
     btnClearAuthToken: TButton;
     btnCheckIMAP: TButton;
-    Memo1: TMemo;
+    mmoLogging: TMemo;
+    btnSendViaREST: TButton;
+    PageControl1: TPageControl;
+    tsEmail: TTabSheet;
+    tsLogging: TTabSheet;
+    lblFrom: TLabel;
+    lblRecipientAddress: TLabel;
+    edtFromAddress: TEdit;
+    lblFromName: TLabel;
+    edtFromName: TEdit;
+    lblRecipientName: TLabel;
+    edtRecipientAddress: TEdit;
+    edtRecipientName: TEdit;
+    mmoBody: TMemo;
+    lblSubject: TLabel;
+    edtSubject: TEdit;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnCheckMsgClick(Sender: TObject);
@@ -41,6 +57,7 @@ type
     procedure btnCheckIMAPClick(Sender: TObject);
     procedure btnAuthenticateClick(Sender: TObject);
     procedure btnSendMsgClick(Sender: TObject);
+    procedure btnSendViaRESTClick(Sender: TObject);
   private
     { Private declarations }
     EmailOAuthDataModule : TEmailOAuthDataModule;
@@ -58,7 +75,7 @@ implementation
 {$R *.dfm}
 
 const
-  Providers : array[0..3] of TMailProviderInfo =
+  Providers : array[0..2] of TMailProviderInfo =
   (
     (  AuthenticationType : TIdSASLXOAuth;
        AuthorizationEndpoint : 'https://accounts.google.com/o/oauth2/auth?access_type=offline';
@@ -66,9 +83,7 @@ const
        LogoutEndpoint : 'https://www.google.com/accounts/Logout';
        ClientID : google_clientid;
        ClientSecret : google_clientsecret;
-       ClientAccount : google_clientAccount;  // your @gmail.com email address
-       ClientName : clientname;
-       Scopes : 'https://mail.google.com/ openid';
+       Scopes : 'https://mail.google.com/ openid email';
        SmtpHost : 'smtp.gmail.com';
        SmtpPort : 465;
        PopHost : 'pop.gmail.com';
@@ -85,9 +100,7 @@ const
        LogoutEndpoint : 'https://login.microsoftonline.com/common/oauth2/v2.0/logout';
        ClientID : microsoft_clientid;
        ClientSecret : '';
-       ClientAccount : microsoftoffice_clientaccount; // your @live.com or @hotmail.com email address
-       ClientName : clientname;
-       Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
+       Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access openid email profile';
        //'wl.imap offline_access';
        SmtpHost : 'smtp-mail.outlook.com';
        SmtpPort : 587;
@@ -105,37 +118,15 @@ const
        LogoutEndpoint : 'https://login.live.com/logout.srf';
        ClientID : microsoft_clientid;
        ClientSecret : '';
-       ClientAccount : microsoft_clientAccount; // your @live.com or @hotmail.com email address
       // Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
-       ClientName : clientname;
-       Scopes : 'wl.imap wl.emails wl.offline_access';
-       SmtpHost : 'smtp.office365.com';
+       Scopes : 'wl.imap wl.emails wl.offline_access openid email profile';
+       SmtpHost : 'smtp-mail.outlook.com';
        SmtpPort : 587;
        PopHost : 'outlook.office365.com';
        PopPort : 995;
-       ImapHost : 'outlook.office365.com';
+       ImapHost : 'imap-mail.outlook.com';
        ImapPort : 993;
        AuthName : 'Hotmail';
-       TLS : utUseExplicitTLS;
-       TwoLinePOPFormat: false
-    ),
-    (  AuthenticationType : TIdOAuth2Bearer;
-       AuthorizationEndpoint : 'https://api.login.yahoo.com/oauth2/request_auth';
-       AccessTokenEndpoint : 'https://api.login.yahoo.com/oauth2/get_token';
-       LogoutEndpoint : '';
-       ClientID : yahoo_clientid;
-       ClientSecret : yahoo_clintsecret;
-       ClientAccount : 'geoff_smith82@yahoo.com'; // your @live.com or @hotmail.com email address
-      // Scopes : 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access';
-       ClientName : clientname;
-       Scopes : 'email mail-r mail-w';
-       SmtpHost : 'smtp.mail.yahoo.com';
-       SmtpPort : 465;
-       PopHost : '';
-       PopPort : 995;
-       ImapHost : 'imap.mail.yahoo.com';
-       ImapPort : 993;
-       AuthName : 'Yahoo';
        TLS : utUseExplicitTLS;
        TwoLinePOPFormat: false
     )
@@ -154,6 +145,11 @@ begin
   EmailOAuthDataModule.AppHandle := Application.Handle;
   EmailOAuthDataModule.Provider := Providers[rgEmailProviders.ItemIndex];
   EmailOAuthDataModule.SetupAuthenticator;
+  edtFromAddress.Text := EmailOAuthDataModule.SendAddress;
+  edtFromName.Text := EmailOAuthDataModule.ReadString('FromName', '');
+  edtSubject.Text :=  EmailOAuthDataModule.ReadString('Subject', '');
+  edtRecipientAddress.Text := EmailOAuthDataModule.ReadString('RecipientAddress', '');
+  edtRecipientName.Text := EmailOAuthDataModule.ReadString('RecipientName', '');
   UpdateButtonsEnabled;
 end;
 
@@ -162,6 +158,7 @@ procedure TForm2.UpdateButtonsEnabled;
 begin
   btnAuthenticate.Enabled :=  not EmailOAuthDataModule.HasRefreshToken;
   btnClearAuthToken.Enabled :=  EmailOAuthDataModule.HasRefreshToken;
+  btnSendViaREST.Enabled := rgEmailProviders.ItemIndex = 1;
 end;
 
 procedure TForm2.btnAuthenticateClick(Sender: TObject);
@@ -188,12 +185,35 @@ end;
 
 procedure TForm2.btnSendMsgClick(Sender: TObject);
 begin
-  EmailOAuthDataModule.SendMessage(clientsendtoaddress, '');
+  if string(edtRecipientAddress.Text).IsEmpty then
+  begin
+    ShowMessage('Recipient Email Address Required');
+    Exit;
+  end;
+
+  EmailOAuthDataModule.SendMessage(edtFromAddress.Text, edtFromName.Text,
+                          edtRecipientAddress.Text, edtRecipientName.Text,
+                          edtSubject.Text, mmoBody.Text, '');
+  EmailOAuthDataModule.WriteString('FromName', edtFromName.Text);
+  EmailOAuthDataModule.WriteString('Subject', edtSubject.Text);
+  EmailOAuthDataModule.WriteString('RecipientAddress', edtRecipientAddress.Text);
+  EmailOAuthDataModule.WriteString('RecipientName', edtRecipientName.Text);
+end;
+
+procedure TForm2.btnSendViaRESTClick(Sender: TObject);
+begin
+  EmailOAuthDataModule.SendEmailUsingREST(edtFromAddress.Text, edtFromName.Text,
+                          edtRecipientAddress.Text, edtRecipientName.Text,
+                          edtSubject.Text, mmoBody.Text, '');
+  EmailOAuthDataModule.WriteString('FromName', edtFromName.Text);
+  EmailOAuthDataModule.WriteString('Subject', edtSubject.Text);
+  EmailOAuthDataModule.WriteString('RecipientAddress', edtRecipientAddress.Text);
+  EmailOAuthDataModule.WriteString('RecipientName', edtRecipientName.Text);
 end;
 
 procedure TForm2.LogMsg(const msg: string);
 begin
-  Memo1.Lines.Add(msg);
+  mmoLogging.Lines.Add(msg);
 end;
 
 procedure TForm2.rgEmailProvidersClick(Sender: TObject);
@@ -201,6 +221,7 @@ begin
   EmailOAuthDataModule.SelectedProvider := rgEmailProviders.ItemIndex;
   EmailOAuthDataModule.Provider := Providers[rgEmailProviders.ItemIndex];
   EmailOAuthDataModule.SetupAuthenticator;
+  edtFromAddress.Text := EmailOAuthDataModule.SendAddress;
   UpdateButtonsEnabled;
 end;
 

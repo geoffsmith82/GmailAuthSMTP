@@ -8,6 +8,8 @@ When a user wants to access their email using an email client or another applica
 
 Using OAuth2 for authentication has several benefits. It allows users to grant access to their email without sharing their login credentials with the application, which helps to protect their privacy and security. It also makes it easier for users to access their email from multiple devices and applications, as they only need to grant access once and can then use the OAuth2 access token to authenticate with the email service from any device.
 
+While the demo app is VCL and so windows only, the EmailOAuthDm.pas datamodule (where the email sending/handling happens) should run wherever Indy does.
+
 ![](Images/SampleIMAPSession.png)
 ## Google Setup
 
@@ -23,7 +25,7 @@ To get these, go to https://console.cloud.google.com/apis/credentials
 
   * microsoft_clientid
   * microsoft_clientaccount
-To get these, go to https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
+To get these, go to https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
 Microsoft will also need various app permissions as shown below
 ![](Images/MSPermissions.png)
 
