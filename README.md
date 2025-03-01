@@ -8,7 +8,15 @@ When a user wants to access their email using an email client or another applica
 
 Using OAuth2 for authentication has several benefits. It allows users to grant access to their email without sharing their login credentials with the application, which helps to protect their privacy and security. It also makes it easier for users to access their email from multiple devices and applications, as they only need to grant access once and can then use the OAuth2 access token to authenticate with the email service from any device.
 
+## Questions
+ **Does this support platforms other than windows?**
+
 While the demo app is VCL and so windows only, the EmailOAuthDm.pas datamodule (where the email sending/handling happens) should run wherever Indy does.
+
+**Why does the app start the default browser instead of just using a TWebBrowser or TEdgeBrowser component?**
+
+Using the default browser allows the existing authenticated login session to be used from Microsoft or Google.  This is also the more secure way of doing it because the app is never able to actually see the password.
+ 
 
 ![](Images/SampleIMAPSession.png)
 ## Google Setup
