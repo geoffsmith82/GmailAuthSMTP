@@ -49,6 +49,7 @@ type
     mmoBody: TMemo;
     lblSubject: TLabel;
     edtSubject: TEdit;
+    btnSendHTMLMsg: TButton;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnCheckMsgClick(Sender: TObject);
@@ -58,6 +59,7 @@ type
     procedure btnAuthenticateClick(Sender: TObject);
     procedure btnSendMsgClick(Sender: TObject);
     procedure btnSendViaRESTClick(Sender: TObject);
+    procedure btnSendHTMLMsgClick(Sender: TObject);
   private
     { Private declarations }
     EmailOAuthDataModule : TEmailOAuthDataModule;
@@ -205,6 +207,33 @@ begin
   EmailOAuthDataModule.SendEmailUsingREST(edtFromAddress.Text, edtFromName.Text,
                           edtRecipientAddress.Text, edtRecipientName.Text,
                           edtSubject.Text, mmoBody.Text, '');
+  EmailOAuthDataModule.WriteString('FromName', edtFromName.Text);
+  EmailOAuthDataModule.WriteString('Subject', edtSubject.Text);
+  EmailOAuthDataModule.WriteString('RecipientAddress', edtRecipientAddress.Text);
+  EmailOAuthDataModule.WriteString('RecipientName', edtRecipientName.Text);
+end;
+
+procedure TForm2.btnSendHTMLMsgClick(Sender: TObject);
+var
+  msg, body : string;
+  InlineImagePaths: array of string;
+  attachFile: string;
+begin
+  if string(edtRecipientAddress.Text).IsEmpty then
+  begin
+    ShowMessage('Recipient Email Address Required');
+    Exit;
+  end;
+
+  msg := '<html><img src="{img0}"><br>Hello</html>';
+  body := 'Body';
+  SetLength(InlineImagePaths, 1);
+  InlineImagePaths[0] := '..\..\Images\SMTPServiceLogos.png';
+  attachFile := '..\..\README.md';
+  EmailOAuthDataModule.SendEmailWithAttachment(edtFromAddress.Text, edtFromName.Text,
+                          edtRecipientAddress.Text, edtRecipientName.Text,
+                          edtSubject.Text, body, msg, InlineImagePaths, attachFile);
+
   EmailOAuthDataModule.WriteString('FromName', edtFromName.Text);
   EmailOAuthDataModule.WriteString('Subject', edtSubject.Text);
   EmailOAuthDataModule.WriteString('RecipientAddress', edtRecipientAddress.Text);

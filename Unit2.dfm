@@ -3,7 +3,7 @@ object Form2: TForm2
   Top = 0
   Caption = 'Test OAUTH2 Gmail Send Message'
   ClientHeight = 943
-  ClientWidth = 1464
+  ClientWidth = 1518
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,13 +14,13 @@ object Form2: TForm2
   OnDestroy = FormDestroy
   PixelsPerInch = 240
   DesignSize = (
-    1464
+    1518
     943)
   TextHeight = 34
   object btnAuthenticate: TButton
-    Left = 1186
+    Left = 1200
     Top = 19
-    Width = 265
+    Width = 321
     Height = 63
     Margins.Left = 8
     Margins.Top = 8
@@ -32,9 +32,9 @@ object Form2: TForm2
     OnClick = btnAuthenticateClick
   end
   object btnSendMsg: TButton
-    Left = 1179
+    Left = 1200
     Top = 218
-    Width = 265
+    Width = 314
     Height = 62
     Margins.Left = 8
     Margins.Top = 8
@@ -65,9 +65,9 @@ object Form2: TForm2
     OnClick = rgEmailProvidersClick
   end
   object btnCheckMsg: TButton
-    Left = 1179
-    Top = 440
-    Width = 265
+    Left = 1200
+    Top = 524
+    Width = 314
     Height = 63
     Margins.Left = 8
     Margins.Top = 8
@@ -79,9 +79,9 @@ object Form2: TForm2
     OnClick = btnCheckMsgClick
   end
   object btnClearAuthToken: TButton
-    Left = 1179
+    Left = 1200
     Top = 98
-    Width = 265
+    Width = 314
     Height = 62
     Margins.Left = 8
     Margins.Top = 8
@@ -93,9 +93,9 @@ object Form2: TForm2
     OnClick = btnClearAuthTokenClick
   end
   object btnCheckIMAP: TButton
-    Left = 1179
-    Top = 540
-    Width = 265
+    Left = 1200
+    Top = 624
+    Width = 314
     Height = 63
     Margins.Left = 8
     Margins.Top = 8
@@ -107,9 +107,9 @@ object Form2: TForm2
     OnClick = btnCheckIMAPClick
   end
   object btnSendViaREST: TButton
-    Left = 1179
-    Top = 318
-    Width = 265
+    Left = 1200
+    Top = 402
+    Width = 314
     Height = 62
     Margins.Left = 8
     Margins.Top = 8
@@ -123,13 +123,13 @@ object Form2: TForm2
   object PageControl1: TPageControl
     Left = 20
     Top = 181
-    Width = 1121
+    Width = 1141
     Height = 749
     Margins.Left = 8
     Margins.Top = 8
     Margins.Right = 8
     Margins.Bottom = 8
-    ActivePage = tsLogging
+    ActivePage = tsEmail
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 7
     object tsEmail: TTabSheet
@@ -139,7 +139,7 @@ object Form2: TForm2
       Margins.Bottom = 8
       Caption = 'Email'
       DesignSize = (
-        1101
+        1121
         682)
       object lblFrom: TLabel
         Left = 88
@@ -243,7 +243,7 @@ object Form2: TForm2
       object mmoBody: TMemo
         Left = 65
         Top = 360
-        Width = 996
+        Width = 1016
         Height = 314
         Margins.Left = 8
         Margins.Top = 8
@@ -277,7 +277,7 @@ object Form2: TForm2
       object mmoLogging: TMemo
         Left = 0
         Top = 0
-        Width = 1101
+        Width = 1121
         Height = 682
         Margins.Left = 8
         Margins.Top = 8
@@ -290,5 +290,19 @@ object Form2: TForm2
         TabOrder = 0
       end
     end
+  end
+  object btnSendHTMLMsg: TButton
+    Left = 1200
+    Top = 296
+    Width = 314
+    Height = 62
+    Margins.Left = 8
+    Margins.Top = 8
+    Margins.Right = 8
+    Margins.Bottom = 8
+    Anchors = [akTop, akRight]
+    Caption = 'Send MSG HTML Test'
+    TabOrder = 8
+    OnClick = btnSendHTMLMsgClick
   end
 end

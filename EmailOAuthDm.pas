@@ -102,14 +102,14 @@ type
                           const subject: string;
                           const body: string;
                           const Path: string): Boolean;
-    procedure SendEmailWithAttachment(
-                          const FromAddress,
-                          ToAddress,
-                          SubjectText: string;
-                          const PlainBody,
-                          HtmlBody: string;
-                          const InlineImagePaths: array of string;
-                          const AttachmentPath: string);
+    procedure SendEmailWithAttachment(const fromAddress: string;
+                                      const fromName:string;
+                                      const recepientAddress: string;
+                                      const recepientName: string;
+                                      const subjectText: string;
+                                      const PlainBody, HtmlBody: string;
+                                      const InlineImagePaths: array of string;
+                                      const AttachmentPath: array of string);
     procedure CheckIMAP;
     procedure CheckPOP;
   end;
@@ -372,24 +372,101 @@ begin
   IdSMTP1.Disconnect;
   ShowMessage('Message Sent');
 end;
-procedure TEmailOAuthDataModule.SendEmailWithAttachment(
-  const FromAddress, ToAddress, SubjectText: string;
-  const PlainBody, HtmlBody: string;
-  const InlineImagePaths: array of string; const AttachmentPath: string);
+
+procedure TEmailOAuthDataModule.SendEmailWithAttachment(const fromAddress: string; const fromName:string;
+                const recepientAddress: string; const recepientName: string; const subjectText: string;
+                const PlainBody, HtmlBody: string;
+                const InlineImagePaths: array of string; const AttachmentPath: array of string);
 var
   xoauthSASL : TIdSASLListEntry;
   Email: TIdMessage;
+  recepient: TIdEMailAddressItem;
   PlainTextPart, HTMLPart: TIdText;
-  InnerPart: TIdMessageParts;
-  ImageAttachment: TIdAttachmentFile;
+  AlternativePart: TIdMessageParts;
+  RelatedPart: TIdMessageParts;
+  ImagePart: TIdAttachmentFile;
   FileAttachment: TIdAttachmentFile;
+  AltParentIdx, RelatedParentIdx: Integer;
   ContentIdList: TArray<string>;
   i: Integer;
   oldRefreshToken : string;
   LTokenName : string;
 begin
-  Email := TIdMessage.Create(nil);
+  Email := nil;
   try
+    Email := TIdMessage.Create(Self);
+    Email.Clear;
+    Email.ContentType := 'multipart/mixed';  // OUTERMOST is mixed
+    Email.CharSet := 'UTF-8';
+    Email.Subject := subjectText;
+    Email.From.Address := fromAddress;
+    Email.From.Name := fromName;
+    Email.ReplyTo.EMailAddresses := Email.From.Address;
+
+    with Email.Recipients.Add do
+    begin
+      Name := recepientName;
+      Address := recepientAddress;
+    end;
+
+    // STEP 1: Create multipart/alternative
+    AltParentIdx := Email.MessageParts.Count; // will point to this "multipart/alternative" header
+    with TIdText.Create(Email.MessageParts, nil) do
+    begin
+      ContentType := 'multipart/alternative';
+    end;
+
+    // STEP 2: Plain text part (child of AltParentIdx)
+    PlainTextPart := TIdText.Create(Email.MessageParts, nil);
+    PlainTextPart.ParentPart := AltParentIdx;
+    PlainTextPart.ContentType := 'text/plain; charset=UTF-8';
+    PlainTextPart.Body.Text := PlainBody;
+
+    // STEP 3: Create multipart/related inside alternative
+    RelatedParentIdx := Email.MessageParts.Count;
+    with TIdText.Create(Email.MessageParts, nil) do
+    begin
+      ParentPart := AltParentIdx;
+      ContentType := 'multipart/related';
+    end;
+
+    // STEP 4: HTML part (child of RelatedParentIdx)
+    HtmlPart := TIdText.Create(Email.MessageParts, nil);
+    HtmlPart.ParentPart := RelatedParentIdx;
+    HtmlPart.ContentType := 'text/html; charset=UTF-8';
+    HtmlPart.Body.Text := HtmlBody;
+
+    // STEP 5: Inline images (child of RelatedParentIdx)
+    SetLength(ContentIdList, Length(InlineImagePaths));
+    for i := Low(InlineImagePaths) to High(InlineImagePaths) do
+    begin
+      ContentIdList[i] := Format('image%d@domain.com', [i]);
+      ImagePart := TIdAttachmentFile.Create(Email.MessageParts, InlineImagePaths[i]);
+      ImagePart.ParentPart := RelatedParentIdx;
+      ImagePart.ContentID := ContentIdList[i];
+      ImagePart.ContentDisposition := 'inline';
+    end;
+
+    // Fix HTML img tags
+    for i := Low(ContentIdList) to High(ContentIdList) do
+    begin
+      HtmlPart.Body.Text := StringReplace(HtmlPart.Body.Text,
+        Format('{img%d}', [i]),
+        Format('cid:%s', [ContentIdList[i]]),
+        [rfReplaceAll]);
+    end;
+
+    // STEP 6: Attachments (top-level, no parent)
+    for i := Low(AttachmentPath) to High(AttachmentPath) do
+    if AttachmentPath[i].Length > 0 then
+    begin
+      FileAttachment := TIdAttachmentFile.Create(Email.MessageParts, AttachmentPath[i]);
+      FileAttachment.ContentDisposition := 'attachment';
+    end;
+
+    // Save to disk for testing
+    // Email.SaveToFile('C:\Programming\GmailAuthSMTP\email.txt');
+
     // Configure SMTP
     // if we only have refresh_token or access token has expired
     // request new access_token to use with request
@@ -408,49 +485,51 @@ begin
       DoLog('Failed to authenticate properly');
       Exit;
     end;
-    IdSMTP1.Host := Provider.SmtpHost;
-    IdSMTP1.UseTLS := Provider.TLS;
-    IdSMTP1.Port := Provider.SmtpPort;
-    xoauthSASL := IdSMTP1.SASLMechanisms.Add;
-    xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
-    TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
-    IdSSLIOHandlerSocketSMTP.SSLOptions.SSLVersions := [sslvTLSv1_2];
-    IdSMTP1.Connect;
-    IdSMTP1.AuthType := satSASL;
-    IdSMTP1.Authenticate;
-    Email.From.Address := FromAddress;
-    Email.Recipients.EmailAddresses := ToAddress;
-    Email.Subject := SubjectText;
-    Email.ContentType := 'multipart/mixed';
-    PlainTextPart := TIdText.Create(Email.MessageParts, nil);
-    PlainTextPart.ContentType := 'text/plain; charset=UTF-8';
-    PlainTextPart.Body.Text := PlainBody;
-    InnerPart := TIdMessageParts.Create(Email.MessageParts);
-    HTMLPart := TIdText.Create(InnerPart, nil);
-    HTMLPart.ContentType := 'text/html; charset=UTF-8';
-    HTMLPart.Body.Text := HtmlBody;
-    SetLength(ContentIdList, Length(InlineImagePaths));
-    for i := Low(InlineImagePaths) to High(InlineImagePaths) do
-    begin
-      ContentIdList[i] := Format('cid:image%d@domain.com', [i]);
-      ImageAttachment := TIdAttachmentFile.Create(InnerPart, InlineImagePaths[i]);
-      ImageAttachment.ContentID := ContentIdList[i];
-      ImageAttachment.ContentDisposition := 'inline';
-    end;
-    for i := Low(ContentIdList) to High(ContentIdList) do
-      HTMLPart.Body.Text := StringReplace(HTMLPart.Body.Text,
-        Format('{img%d}', [i]), Format('cid:%s', [ContentIdList[i]]), [rfReplaceAll]);
-    FileAttachment := TIdAttachmentFile.Create(Email.MessageParts, AttachmentPath);
-    FileAttachment.ContentDisposition := 'attachment';
-    IdSMTP1.Connect;
+
+  // if we only have refresh_token or access token has expired
+  // request new access_token to use with request
+  FOAuth2_Enhanced.ClientID := Provider.ClientID;
+  FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
+
+  FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
+  if (oldRefreshToken <> FOAuth2_Enhanced.RefreshToken) and (not FOAuth2_Enhanced.RefreshToken.IsEmpty) then
+  begin
+    LTokenName := Provider.AuthName + 'Token';
+    FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
+  end;
+
+  DoLog('refresh_token=' + FOAuth2_Enhanced.RefreshToken);
+  DoLog('access_token=' + FOAuth2_Enhanced.AccessToken);
+
+  if FOAuth2_Enhanced.AccessToken.Length = 0 then
+  begin
+    DoLog('Failed to authenticate properly');
+    Exit;
+  end;
+
+  IdSMTP1.Host := Provider.SmtpHost;
+  IdSMTP1.UseTLS := Provider.TLS;
+  IdSMTP1.Port := Provider.SmtpPort;
+
+  xoauthSASL := IdSMTP1.SASLMechanisms.Add;
+  xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
+
+  TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
+  TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
+
+  IdSSLIOHandlerSocketSMTP.SSLOptions.SSLVersions := [sslvTLSv1_2];
+
+  IdSMTP1.Connect;
+
+  IdSMTP1.AuthType := satSASL;
+  IdSMTP1.Authenticate;
     try
       IdSMTP1.Send(Email);
     finally
       IdSMTP1.Disconnect;
     end;
   finally
-    Email.Free;
+    FreeAndNil(Email);
   end;
 end;
 
