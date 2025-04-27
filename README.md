@@ -41,7 +41,8 @@ Microsoft will also need various app permissions as shown below
   * clientname
 
 ## Dependencies
-This project requires OpenSSL.  You can find the required files at https://github.com/IndySockets/OpenSSL-Binaries
+- TaurusTLS found at https://github.com/JPeterMugaas/TaurusTLS or in GetIt package manager in the Delphi IDE
+- OpenSSL.  You can find the required files at https://github.com/TurboPack/OpenSSL-Distribution/tree/main/binaries/Windows
 
 
 Thanks

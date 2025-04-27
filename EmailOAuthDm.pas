@@ -44,20 +44,24 @@ uses
   , REST.Client
   , Data.Bind.Components
   , Data.Bind.ObjectScope
+  , IdCTypes
+  , TaurusTLSHeaders_ossl_typ
+  , TaurusTLS_X509
+  , TaurusTLS
   ;
 
 type
   TEmailOAuthDataModule = class(TDataModule)
-    IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL;
+    IdSSLIOHandlerSocketPOP: TTaurusTLSIOHandlerSocket;
     IdPOP3: TIdPOP3;
     IdSMTP1: TIdSMTP;
     IdConnectionInterceptSMTP: TIdConnectionIntercept;
-    IdSSLIOHandlerSocketSMTP: TIdSSLIOHandlerSocketOpenSSL;
+    IdSSLIOHandlerSocketSMTP: TTaurusTLSIOHandlerSocket;
     IdHTTPServer1: TIdHTTPServer;
     IdConnectionInterceptIMAP: TIdConnectionIntercept;
     IdConnectionPOP: TIdConnectionIntercept;
     IdIMAP: TIdIMAP4;
-    IdSSLIOHandlerSocketIMAP: TIdSSLIOHandlerSocketOpenSSL;
+    IdSSLIOHandlerSocketIMAP: TTaurusTLSIOHandlerSocket;
     RESTResponseGraph: TRESTResponse;
     RESTRequestGraph: TRESTRequest;
     RESTClientGraph: TRESTClient;
@@ -351,8 +355,6 @@ begin
   TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
   TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
 
-  IdSSLIOHandlerSocketSMTP.SSLOptions.SSLVersions := [sslvTLSv1_2];
-
   IdSMTP1.Connect;
 
   IdSMTP1.AuthType := satSASL;
@@ -397,17 +399,15 @@ begin
     Email := TIdMessage.Create(Self);
     Email.Clear;
     Email.ContentType := 'multipart/mixed';  // OUTERMOST is mixed
-    Email.CharSet := 'UTF-8';
+    Email.CharSet := 'utf-8';
     Email.Subject := subjectText;
     Email.From.Address := fromAddress;
     Email.From.Name := fromName;
     Email.ReplyTo.EMailAddresses := Email.From.Address;
 
-    with Email.Recipients.Add do
-    begin
-      Name := recepientName;
-      Address := recepientAddress;
-    end;
+    recepient := Email.Recipients.Add;
+    recepient.Name := recepientName;
+    recepient.Address := recepientAddress;
 
     // STEP 1: Create multipart/alternative
     AltParentIdx := Email.MessageParts.Count; // will point to this "multipart/alternative" header
@@ -486,43 +486,41 @@ begin
       Exit;
     end;
 
-  // if we only have refresh_token or access token has expired
-  // request new access_token to use with request
-  FOAuth2_Enhanced.ClientID := Provider.ClientID;
-  FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
+    // if we only have refresh_token or access token has expired
+    // request new access_token to use with request
+    FOAuth2_Enhanced.ClientID := Provider.ClientID;
+    FOAuth2_Enhanced.ClientSecret := Provider.ClientSecret;
 
-  FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
-  if (oldRefreshToken <> FOAuth2_Enhanced.RefreshToken) and (not FOAuth2_Enhanced.RefreshToken.IsEmpty) then
-  begin
-    LTokenName := Provider.AuthName + 'Token';
-    FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
-  end;
+    FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
+    if (oldRefreshToken <> FOAuth2_Enhanced.RefreshToken) and (not FOAuth2_Enhanced.RefreshToken.IsEmpty) then
+    begin
+      LTokenName := Provider.AuthName + 'Token';
+      FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
+    end;
 
-  DoLog('refresh_token=' + FOAuth2_Enhanced.RefreshToken);
-  DoLog('access_token=' + FOAuth2_Enhanced.AccessToken);
+    DoLog('refresh_token=' + FOAuth2_Enhanced.RefreshToken);
+    DoLog('access_token=' + FOAuth2_Enhanced.AccessToken);
 
-  if FOAuth2_Enhanced.AccessToken.Length = 0 then
-  begin
-    DoLog('Failed to authenticate properly');
-    Exit;
-  end;
+    if FOAuth2_Enhanced.AccessToken.Length = 0 then
+    begin
+      DoLog('Failed to authenticate properly');
+      Exit;
+    end;
 
-  IdSMTP1.Host := Provider.SmtpHost;
-  IdSMTP1.UseTLS := Provider.TLS;
-  IdSMTP1.Port := Provider.SmtpPort;
+    IdSMTP1.Host := Provider.SmtpHost;
+    IdSMTP1.UseTLS := Provider.TLS;
+    IdSMTP1.Port := Provider.SmtpPort;
 
-  xoauthSASL := IdSMTP1.SASLMechanisms.Add;
-  xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
+    xoauthSASL := IdSMTP1.SASLMechanisms.Add;
+    xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
 
-  TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-  TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
+    TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
+    TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
 
-  IdSSLIOHandlerSocketSMTP.SSLOptions.SSLVersions := [sslvTLSv1_2];
+    IdSMTP1.Connect;
 
-  IdSMTP1.Connect;
-
-  IdSMTP1.AuthType := satSASL;
-  IdSMTP1.Authenticate;
+    IdSMTP1.AuthType := satSASL;
+    IdSMTP1.Authenticate;
     try
       IdSMTP1.Send(Email);
     finally

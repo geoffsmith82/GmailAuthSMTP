@@ -4,17 +4,17 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
   Height = 1064
   Width = 1762
   PixelsPerInch = 240
-  object IdSSLIOHandlerSocketPOP: TIdSSLIOHandlerSocketOpenSSL
+  object IdSSLIOHandlerSocketPOP: TTaurusTLSIOHandlerSocket
     Destination = ':110'
     Intercept = IdConnectionPOP
     MaxLineAction = maException
     Port = 110
     DefaultPort = 0
-    SSLOptions.Method = sslvTLSv1_2
-    SSLOptions.SSLVersions = [sslvTLSv1_2]
+    SSLOptions.MinTLSVersion = TLSv1_3
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
+    SSLOptions.VerifyHostname = False
     Left = 1504
     Top = 304
   end
@@ -32,9 +32,8 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     IOHandler = IdSSLIOHandlerSocketSMTP
     AuthType = satSASL
     SASLMechanisms = <>
-    UseTLS = utUseRequireTLS
     Left = 216
-    Top = 616
+    Top = 529
   end
   object IdConnectionInterceptSMTP: TIdConnectionIntercept
     OnReceive = IdConnectionReceive
@@ -42,19 +41,19 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     Left = 224
     Top = 104
   end
-  object IdSSLIOHandlerSocketSMTP: TIdSSLIOHandlerSocketOpenSSL
+  object IdSSLIOHandlerSocketSMTP: TTaurusTLSIOHandlerSocket
     Destination = ':25'
     Intercept = IdConnectionInterceptSMTP
     MaxLineAction = maException
     Port = 25
     DefaultPort = 0
-    SSLOptions.Method = sslvTLSv1_2
-    SSLOptions.SSLVersions = [sslvTLSv1_2]
+    SSLOptions.MinTLSVersion = TLSv1_3
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
+    SSLOptions.VerifyHostname = False
     Left = 216
-    Top = 360
+    Top = 328
   end
   object IdHTTPServer1: TIdHTTPServer
     Bindings = <>
@@ -85,17 +84,17 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     Left = 1040
     Top = 96
   end
-  object IdSSLIOHandlerSocketIMAP: TIdSSLIOHandlerSocketOpenSSL
+  object IdSSLIOHandlerSocketIMAP: TTaurusTLSIOHandlerSocket
     Destination = ':143'
     Intercept = IdConnectionInterceptIMAP
     MaxLineAction = maException
     Port = 143
     DefaultPort = 0
-    SSLOptions.Method = sslvTLSv1_2
-    SSLOptions.SSLVersions = [sslvTLSv1_2]
+    SSLOptions.MinTLSVersion = TLSv1_3
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
+    SSLOptions.VerifyHostname = False
     Left = 1048
     Top = 312
   end
