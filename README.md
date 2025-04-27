@@ -8,6 +8,13 @@ When a user wants to access their email using an email client or another applica
 
 Using OAuth2 for authentication has several benefits. It allows users to grant access to their email without sharing their login credentials with the application, which helps to protect their privacy and security. It also makes it easier for users to access their email from multiple devices and applications, as they only need to grant access once and can then use the OAuth2 access token to authenticate with the email service from any device.
 
+The demo privides some simple examples of
+  - Sending an Email message via Gmail/Hotmail/Outlook
+    - Creating a HTML email message with inline images and attachments
+  - Sending an Email message via Microsoft Graph REST API (Outlook/Office365)
+  - Getting messages via POP3
+  - Getting messages via IMAP
+
 ## Questions
  **Does this support platforms other than windows?**
 
