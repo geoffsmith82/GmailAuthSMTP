@@ -14,6 +14,12 @@ The demo privides some simple examples of
   - Sending an Email message via Microsoft Graph REST API (Outlook/Office365)
   - Getting messages via POP3
   - Getting messages via IMAP
+  
+Ian Barker from Embarcedero [@checkdigits](https://github.com/checkdigits) did a presentation in is 30 for 30 series, based on this project. I incorporated some of his ideas/changes into my project.
+
+[![Watch the video](https://img.youtube.com/vi/Rw_8oZa-IIs/0.jpg)](https://www.youtube.com/live/Rw_8oZa-IIs?si=_KeCtMeAhHEF8a_k&t=129)
+
+  
 
 ## Questions
  **Does this support platforms other than windows?**
