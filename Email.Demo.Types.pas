@@ -3,7 +3,8 @@ unit Email.Demo.Types;
 interface
 
 uses
-    IdSASL.OAuth.Base
+    TaurusTLS
+  , IdSASL.OAuth.Base
   , IdExplicitTLSClientServerBase
   ;
 
@@ -29,6 +30,7 @@ type
     ImapPort : Integer;
     AuthName : string;
     TLS : TIdUseTLS;
+    Version : TTaurusTLSSSLVersion;
     TwoLinePOPFormat: Boolean;
     function TokenName: string;
   end;

@@ -347,6 +347,7 @@ begin
 
   IdSMTP1.Host := Provider.SmtpHost;
   IdSMTP1.UseTLS := Provider.TLS;
+  IdSSLIOHandlerSocketSMTP.SSLOptions.MinTLSVersion := Provider.Version;
   IdSMTP1.Port := Provider.SmtpPort;
 
   xoauthSASL := IdSMTP1.SASLMechanisms.Add;
@@ -509,6 +510,7 @@ begin
 
     IdSMTP1.Host := Provider.SmtpHost;
     IdSMTP1.UseTLS := Provider.TLS;
+    IdSSLIOHandlerSocketSMTP.SSLOptions.MinTLSVersion := Provider.Version;
     IdSMTP1.Port := Provider.SmtpPort;
 
     xoauthSASL := IdSMTP1.SASLMechanisms.Add;
@@ -563,6 +565,7 @@ begin
   IdIMAP.Host := Provider.ImapHost;
   IdIMAP.Port := Provider.ImapPort;
   IdIMAP.UseTLS := Provider.TLS;
+  IdSSLIOHandlerSocketIMAP.SSLOptions.MinTLSVersion := Provider.Version;
 
   xoauthSASL := IdIMAP.SASLMechanisms.Add;
   xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
@@ -617,6 +620,7 @@ begin
   IdPOP3.Host := Provider.PopHost;
   IdPOP3.Port := Provider.PopPort;
   IdPOP3.UseTLS := utUseImplicitTLS;//Providers[SelectedProvider].TLS;
+  IdSSLIOHandlerSocketPOP.SSLOptions.MinTLSVersion := Provider.Version;
 
   xoauthSASL := IdPOP3.SASLMechanisms.Add;
   xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);

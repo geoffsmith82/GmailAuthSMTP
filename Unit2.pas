@@ -76,6 +76,9 @@ implementation
 
 {$R *.dfm}
 
+uses
+  TaurusTLS;
+
 const
   Providers : array[0..2] of TMailProviderInfo =
   (
@@ -94,6 +97,7 @@ const
        ImapPort : 143;
        AuthName : 'Google';
        TLS : utUseImplicitTLS;
+       Version : TTaurusTLSSSLVersion.TLSv1_3;
        TwoLinePOPFormat: False
     ),
     (  AuthenticationType : TIdSASLXOAuth;
@@ -112,6 +116,7 @@ const
        ImapPort : 993;
        AuthName : 'Microsoft';
        TLS : utUseExplicitTLS;
+       Version : TTaurusTLSSSLVersion.TLSv1_2;
        TwoLinePOPFormat: True
     ),
     (  AuthenticationType : TIdSASLXOAuth;
@@ -130,7 +135,7 @@ const
        ImapPort : 993;
        AuthName : 'Hotmail';
        TLS : utUseExplicitTLS;
-       TwoLinePOPFormat: false
+       Version : TTaurusTLSSSLVersion.TLSv1_2;
     )
   );
 
