@@ -14,7 +14,6 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
-    SSLOptions.VerifyHostname = False
     Left = 1504
     Top = 304
   end
@@ -51,7 +50,6 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
-    SSLOptions.VerifyHostname = False
     Left = 216
     Top = 328
   end
@@ -94,7 +92,6 @@ object EmailOAuthDataModule: TEmailOAuthDataModule
     SSLOptions.Mode = sslmClient
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
-    SSLOptions.VerifyHostname = False
     Left = 1048
     Top = 312
   end
