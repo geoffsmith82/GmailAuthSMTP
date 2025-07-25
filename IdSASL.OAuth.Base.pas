@@ -18,6 +18,8 @@ type
     property Token: string read FToken write FToken;
   end;
 
+  TIdSASLOAuthBaseClass = class of TIdSASLOAuthBase;
+
 implementation
 
 end.

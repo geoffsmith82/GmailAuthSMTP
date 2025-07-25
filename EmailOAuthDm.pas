@@ -77,6 +77,8 @@ type
     FIsAuthenticated : Boolean;
     procedure DoLog(const msg: String);
     procedure ForceForegroundNoActivate(hWnd: THandle);
+    procedure DeleteSASL(SASLMechanisms: TIdSASLEntries; xClass: TIdSASLOAuthBaseClass);
+    procedure DeleteSASLOAuth;
   public
     { Public declarations }
     SendAddress : string;
@@ -90,6 +92,7 @@ type
     procedure Authenticate;
     procedure ClearAuthentication;
     procedure SetupAuthenticator;
+    procedure AuthAccessToken(fromAddress: string);
     function ReadString(const Ident, Default: string): string;
     procedure WriteString(const Ident, Value: String);
     procedure SendMessage(const fromAddress: string;
@@ -133,6 +136,8 @@ uses
   , System.DateUtils
   , Dialogs
   , REST.Consts
+  , IdSASL.OAuth.OAuth2Bearer
+  , IdSASL.OAuth.XOAUTH2
   ;
 
 const
@@ -159,7 +164,9 @@ end;
 
 procedure TEmailOAuthDataModule.DataModuleDestroy(Sender: TObject);
 begin
+  DeleteSASLOAuth;
   FreeAndNil(FOAuth2_Enhanced);
+  FreeAndNil(FIniSettings);
 end;
 
 procedure TEmailOAuthDataModule.DoLog(const msg: String);
@@ -222,6 +229,64 @@ end;
 function TEmailOAuthDataModule.ReadString(const Ident, Default: string): string;
 begin
   Result := FIniSettings.ReadString('Authentication', Ident, '');
+end;
+
+procedure TEmailOAuthDataModule.DeleteSASL(SASLMechanisms : TIdSASLEntries; xClass: TIdSASLOAuthBaseClass);
+var
+  itemIdx : Integer;
+begin
+  itemIdx := SASLMechanisms.IndexOfComp(SASLMechanisms.FindSASL(xClass.ServiceName));
+  if itemIdx < 0 then
+    Exit;
+  FreeAndNil(SASLMechanisms[itemIdx].SASL);
+  SASLMechanisms.Delete(itemIdx);
+end;
+
+procedure TEmailOAuthDataModule.DeleteSASLOAuth;
+begin
+  DeleteSASL(IdSMTP1.SASLMechanisms, TIdSASLXOAuth);
+  DeleteSASL(IdSMTP1.SASLMechanisms, TIdOAuth2Bearer);
+
+  DeleteSASL(IdPOP3.SASLMechanisms, TIdSASLXOAuth);
+  DeleteSASL(IdPOP3.SASLMechanisms, TIdOAuth2Bearer);
+
+  DeleteSASL(IdIMAP.SASLMechanisms, TIdSASLXOAuth);
+  DeleteSASL(IdIMAP.SASLMechanisms, TIdOAuth2Bearer);
+end;
+
+procedure TEmailOAuthDataModule.AuthAccessToken(fromAddress: string);
+var
+  auth : TIdSASLOAuthBase;
+  xoauthSASL : TIdSASLListEntry;
+  itemIdx: Integer;
+begin
+  DeleteSASLOAuth;
+
+  FOAuth2_Enhanced.RefreshAccessTokenIfRequired;
+
+  // SMTP
+  xoauthSASL := IdSMTP1.SASLMechanisms.Add;
+  auth := Provider.AuthenticationType.Create(nil);
+  auth.User := fromAddress;
+
+  auth.Token := FOAuth2_Enhanced.AccessToken;
+  xoauthSASL.SASL := auth;
+
+  // POP3
+  xoauthSASL := IdPOP3.SASLMechanisms.Add;
+  auth := Provider.AuthenticationType.Create(nil);
+  auth.User := fromAddress;
+
+  auth.Token := FOAuth2_Enhanced.AccessToken;
+  xoauthSASL.SASL := auth;
+
+  // IMAP
+  xoauthSASL := IdIMAP.SASLMechanisms.Add;
+  auth := Provider.AuthenticationType.Create(nil);
+  auth.User := fromAddress;
+
+  auth.Token := FOAuth2_Enhanced.AccessToken;
+  xoauthSASL.SASL := auth;
 end;
 
 procedure TEmailOAuthDataModule.Authenticate;
@@ -319,7 +384,6 @@ procedure TEmailOAuthDataModule.SendMessage(const fromAddress: string; const fro
                 const Path: String);
 var
   IdMessage: TIdMessage;
-  xoauthSASL : TIdSASLListEntry;
   oldRefreshToken : string;
   LTokenName : string;
   recepient: TIdEMailAddressItem;
@@ -350,11 +414,7 @@ begin
   IdSSLIOHandlerSocketSMTP.SSLOptions.MinTLSVersion := Provider.Version;
   IdSMTP1.Port := Provider.SmtpPort;
 
-  xoauthSASL := IdSMTP1.SASLMechanisms.Add;
-  xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
-
-  TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-  TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
+  AuthAccessToken(fromAddress);
 
   IdSMTP1.Connect;
 
@@ -513,11 +573,7 @@ begin
     IdSSLIOHandlerSocketSMTP.SSLOptions.MinTLSVersion := Provider.Version;
     IdSMTP1.Port := Provider.SmtpPort;
 
-    xoauthSASL := IdSMTP1.SASLMechanisms.Add;
-    xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
-
-    TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-    TIdSASLOAuthBase(xoauthSASL.SASL).User := fromAddress;
+    AuthAccessToken(fromAddress);
 
     IdSMTP1.Connect;
 
@@ -535,7 +591,6 @@ end;
 
 procedure TEmailOAuthDataModule.CheckIMAP;
 var
-  xoauthSASL : TIdSASLListEntry;
   msgCount : Integer;
   mailboxes : TStringList;
   oldRefreshToken : string;
@@ -567,11 +622,7 @@ begin
   IdIMAP.UseTLS := Provider.TLS;
   IdSSLIOHandlerSocketIMAP.SSLOptions.MinTLSVersion := Provider.Version;
 
-  xoauthSASL := IdIMAP.SASLMechanisms.Add;
-  xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
-
-  TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-  TIdSASLOAuthBase(xoauthSASL.SASL).User := SendAddress;
+  AuthAccessToken(SendAddress);
 
   IdIMAP.AuthType := iatSASL;
   IdIMAP.Connect;
@@ -597,7 +648,7 @@ const
   ST_OK = '+OK';
   ST_SASLCONTINUE = '+';  {Do not translate}
 var
-  xoauthSASL : TIdSASLListEntry;
+
   msgCount : Integer;
 begin
   IdPOP3.Disconnect;
@@ -622,11 +673,7 @@ begin
   IdPOP3.UseTLS := utUseImplicitTLS;//Providers[SelectedProvider].TLS;
   IdSSLIOHandlerSocketPOP.SSLOptions.MinTLSVersion := Provider.Version;
 
-  xoauthSASL := IdPOP3.SASLMechanisms.Add;
-  xoauthSASL.SASL := Provider.AuthenticationType.Create(nil);
-
-  TIdSASLOAuthBase(xoauthSASL.SASL).Token := FOAuth2_Enhanced.AccessToken;
-  TIdSASLOAuthBase(xoauthSASL.SASL).User := SendAddress;
+  AuthAccessToken(SendAddress);
 
   IdPOP3.AuthType := patSASL;
   IdPOP3.UseTLS := utUseImplicitTLS;
