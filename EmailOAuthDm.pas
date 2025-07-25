@@ -45,7 +45,7 @@ uses
   , Data.Bind.Components
   , Data.Bind.ObjectScope
   , IdCTypes
-  , TaurusTLSHeaders_ossl_typ
+  , TaurusTLSHeaders_types
   , TaurusTLS_X509
   , TaurusTLS
   ;
