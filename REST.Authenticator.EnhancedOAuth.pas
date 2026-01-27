@@ -109,6 +109,7 @@ var
   LToken: string;
   LIntValue: int64;
   url : TURI;
+  i : integer;
 begin
 
   // we do need an clientid here, because we want
@@ -131,11 +132,16 @@ begin
     url.AddParameter('client_id', ClientID);
     if not ClientSecret.IsEmpty then
       url.AddParameter('client_secret', ClientSecret);
-    paramBody := LRequest.Params.AddItem;
-    paramBody.Value := url.Query;
-    paramBody.Kind := pkREQUESTBODY;
-    paramBody.Options := [poDoNotEncode];
-    paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+
+    for i := 0 to Length(url.Params) - 1 do
+    begin
+         paramBody := LRequest.Params.AddItem;
+         paramBody.Name := url.params[i].Name;
+         paramBody.Value := url.Params[i].Value;
+         paramBody.Kind := pkREQUESTBODY;
+         paramBody.Options := [poDoNotEncode];
+         paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+    end;
 
     LRequest.Execute;
 
@@ -184,6 +190,7 @@ var
   LToken: string;
   LIntValue: int64;
   url : TURI;
+  i : integer;
 begin
 
   // we do need an authorization-code here, because we want
@@ -203,17 +210,30 @@ begin
     url.AddParameter('client_secret', ClientSecret);
     url.AddParameter('redirect_uri', RedirectionEndpoint);
 
-    paramBody := LRequest.Params.AddItem;
-    paramBody.Value := url.Query;
-    paramBody.Kind := pkREQUESTBODY;
-    paramBody.Options := [poDoNotEncode];
-    paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+    for i := 0 to Length(url.Params) - 1 do
+    begin
+         paramBody := LRequest.Params.AddItem;
+         paramBody.Name := url.params[i].Name;
+         paramBody.Value := url.Params[i].Value;
+         paramBody.Kind := pkREQUESTBODY;
+         paramBody.Options := [poDoNotEncode];
+         paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+    end;
 
+    try
+      LRequest.Execute;
+    except
+      on E : Exception do
+      begin
+         raise Exception.Create('error msg: ' + E.Message + #13#10 + 'Content: ' + LRequest.Response.Content);
+      end;
 
-    LRequest.Execute;
+    end;
 
     if LRequest.Response.GetSimpleValue('access_token', LToken) then
       AccessToken := LToken;
+    if lToken = '' then
+       raise Exception.Create('No Token: ' + LRequest.Response.Content);
     if LRequest.Response.GetSimpleValue('refresh_token', LToken) then
       RefreshToken := LToken;
     if LRequest.Response.GetSimpleValue('id_token', LToken) then
