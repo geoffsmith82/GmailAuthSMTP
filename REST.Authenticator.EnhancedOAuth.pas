@@ -49,12 +49,21 @@ type
 
   TEnhancedOAuth2Authenticator = class (TOAuth2Authenticator)
   private
+    fUsePKCE: boolean;
+    fPKCEVerifier : string;
+    fPKCEChallenge : string;
+    procedure InitPKCE;
     procedure RequestAccessToken;
+    procedure SetUsePKCE(const Value: boolean);
   public
     IDToken : string;
     procedure ChangeAuthCodeToAccesToken;
     procedure RefreshAccessTokenIfRequired;
     function AuthorizationRequestURI: string;
+
+    property UsePKCE : boolean read fUsePKCE write SetUsePKCE;
+    property PKCEChallenge : string read fPKCEChallenge write fPKCEChallenge;
+    property PKCEVerifier : string read fPKCEVerifier write fPKCEVerifier;
   end;
 
 implementation
@@ -63,11 +72,15 @@ uses
     System.NetEncoding
   , System.Net.URLClient
   , System.DateUtils
+  , System.Hash
   , IdSASL.Oauth.XOAUTH2
   , IdSASL.Oauth.OAuth2Bearer
   , REST.Client
   , REST.Consts
   , REST.Types
+  , IdHashSha
+  , IdGlobal
+  , Winapi.Windows
   ;
 
 
@@ -90,6 +103,14 @@ begin
   if LocalState <> '' then
     uri.AddParameter('state', LocalState);
 
+  if fUsePKCE then
+  begin
+       InitPKCE; // create a new challenge for the authirization request!
+
+       uri.AddParameter('code_challenge_method', 'S256');
+       uri.AddParameter('code_challenge', fPKCEChallenge);
+  end;
+
   Result := uri.ToString;
 end;
 
@@ -109,6 +130,7 @@ var
   LToken: string;
   LIntValue: int64;
   url : TURI;
+  i : integer;
 begin
 
   // we do need an clientid here, because we want
@@ -130,12 +152,17 @@ begin
     url.AddParameter('refresh_token', RefreshToken);
     url.AddParameter('client_id', ClientID);
     if not ClientSecret.IsEmpty then
-      url.AddParameter('client_secret', ClientSecret);
-    paramBody := LRequest.Params.AddItem;
-    paramBody.Value := url.Query;
-    paramBody.Kind := pkREQUESTBODY;
-    paramBody.Options := [poDoNotEncode];
-    paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+       url.AddParameter('client_secret', ClientSecret);
+
+    for i := 0 to Length(url.Params) - 1 do
+    begin
+         paramBody := LRequest.Params.AddItem;
+         paramBody.Name := url.params[i].Name;
+         paramBody.Value := url.Params[i].Value;
+         paramBody.Kind := pkREQUESTBODY;
+         paramBody.Options := [poDoNotEncode];
+         paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+    end;
 
     LRequest.Execute;
 
@@ -175,6 +202,14 @@ begin
 end;
 
 
+procedure TEnhancedOAuth2Authenticator.SetUsePKCE(const Value: boolean);
+begin
+     fUsePKCE := Value;
+
+     fPKCEVerifier := '';
+     fPKCEChallenge := '';
+end;
+
 // This function is basically a copy of the ancestor... but is need so we can also get the id_token value.
 procedure TEnhancedOAuth2Authenticator.ChangeAuthCodeToAccesToken;
 var
@@ -184,6 +219,7 @@ var
   LToken: string;
   LIntValue: int64;
   url : TURI;
+  i : integer;
 begin
 
   // we do need an authorization-code here, because we want
@@ -203,17 +239,33 @@ begin
     url.AddParameter('client_secret', ClientSecret);
     url.AddParameter('redirect_uri', RedirectionEndpoint);
 
-    paramBody := LRequest.Params.AddItem;
-    paramBody.Value := url.Query;
-    paramBody.Kind := pkREQUESTBODY;
-    paramBody.Options := [poDoNotEncode];
-    paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+    if fUsePKCE then
+       url.AddParameter('code_verifier', fPKCEVerifier);
 
+    for i := 0 to Length(url.Params) - 1 do
+    begin
+         paramBody := LRequest.Params.AddItem;
+         paramBody.Name := url.params[i].Name;
+         paramBody.Value := url.Params[i].Value;
+         paramBody.Kind := pkREQUESTBODY;
+         paramBody.Options := [poDoNotEncode];
+         paramBody.ContentType := TRESTContentType.ctAPPLICATION_X_WWW_FORM_URLENCODED;
+    end;
 
-    LRequest.Execute;
+    try
+      LRequest.Execute;
+    except
+      on E : Exception do
+      begin
+         raise Exception.Create('error msg: ' + E.Message + #13#10 + 'Content: ' + LRequest.Response.Content);
+      end;
+
+    end;
 
     if LRequest.Response.GetSimpleValue('access_token', LToken) then
       AccessToken := LToken;
+    if lToken = '' then
+       raise Exception.Create('No Token: ' + LRequest.Response.Content);
     if LRequest.Response.GetSimpleValue('refresh_token', LToken) then
       RefreshToken := LToken;
     if LRequest.Response.GetSimpleValue('id_token', LToken) then
@@ -244,6 +296,92 @@ begin
   finally
     FreeAndNil(LClient);
   end;
+end;
+
+// ###########################################
+// #### Cryptographic random engine:
+// ###########################################
+
+type
+  BCrypt_ALG_HANDLE = Pointer;
+
+  // newer BCrypt.h API
+  TBCryptGenRandom = function (hAlgorith : BCRYPT_ALG_HANDLE; pbBuffer : PByte;
+                               cbBuffer : ULong; dwFlags : ULong ) : Longint; stdcall;
+
+const BCRYPT_USE_SYSTEM_PREFERRED_RNG = $00000002;
+      STATUS_SUCCESS = 0;
+
+var locBcryptHdl : THandle = 0;
+    locBCrytGenRandom : TBCryptGenRandom = nil;
+
+function GetRandomBuffer( len : integer ) : TBytes;
+var i : integer;
+begin
+      // cryptographic secure os provided random generator
+      if locBcryptHdl = 0 then
+      begin
+           locBcryptHdl := LoadLibrary('BCrypt.dll');
+
+           if locBcryptHdl <> 0
+           then
+               locBCrytGenRandom := TBCryptGenRandom( GetProcAddress(locBCryptHdl, 'BCryptGenRandom') )
+           else
+               Randomize;
+      end;
+
+      SetLength(Result, len);
+
+      if Assigned(locBCrytGenRandom) and (len > 0) then
+      begin
+           if locBCrytGenRandom(nil, @Result[0], len, BCRYPT_USE_SYSTEM_PREFERRED_RNG) <> STATUS_SUCCESS then
+             RaiseLastOSError;
+      end
+      else
+      begin
+           // fallback to non cryptographic random generator
+           for i := 0 to Length(Result) - 1 do
+               Result[i] := Byte( Random($FF) );
+      end;
+
+end;
+
+procedure TEnhancedOAuth2Authenticator.InitPKCE;
+const cMaxRandLen = 128;   // as of rfc7636 the base64 url encoded string hast to be >= 43 and <= 128 characters
+      cRndBufLen = 64;     // recommended by RFC is 32
+
+  function EncBase64Url( buf : TBytes ) : string;
+  var enc : TBase64Encoding;
+  begin
+       enc := TBase64Encoding.Create(0);
+       try
+          Result := enc.EncodeBytesToString(buf);
+
+          // convert base64 to base64 url encoded:
+          Result := StringReplace(Result, '+', '-', [rfReplaceAll]);    // Replace + with -
+          Result := StringReplace(Result, '/', '_', [rfReplaceAll]);    // Replace / with _
+          Result := StringReplace(Result, '=', '',  [rfReplaceAll]);    // Remove padding, character =
+       finally
+              enc.Free;
+       end;
+  end;
+  function RandStringBase64 : string;
+  var buf : TBytes;
+  begin
+       buf := GetRandomBuffer(cRndBufLen);
+
+       Result := EncBase64Url(buf);
+  end;
+
+var buf : TBytes;
+    hashsha256 : THashSHA2;
+begin
+     fPKCEVerifier := RandStringBase64;
+     LocalState := RandStringBase64;
+
+     // challange is:  BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
+     buf := hashsha256.GetHashBytes(fPKCEVerifier, SHA256); // internally does a convertion to utf8 which is ansi for a base64 encoded string
+     fPKCEChallenge := EncBase64Url(buf);
 end;
 
 { TJWTHeader }
