@@ -75,10 +75,15 @@ type
     FOAuth2_Enhanced : TEnhancedOAuth2Authenticator;
     FIniSettings : TIniFile;
     FIsAuthenticated : Boolean;
+    fPKCE: Boolean;
     procedure DoLog(const msg: String);
     procedure ForceForegroundNoActivate(hWnd: THandle);
     procedure DeleteSASL(SASLMechanisms: TIdSASLEntries; xClass: TIdSASLOAuthBaseClass);
     procedure DeleteSASLOAuth;
+
+    procedure SetPKCE(const Value: Boolean);
+  public
+    property PKCE : Boolean read fPKCE write SetPKCE;
   public
     { Public declarations }
     SendAddress : string;
@@ -207,7 +212,12 @@ begin
   FOAuth2_Enhanced.AuthCode := LCode;
   FOAuth2_Enhanced.ChangeAuthCodeToAccesToken;
   LTokenName := Provider.AuthName + 'Token';
+
   FIniSettings.WriteString('Authentication', LTokenName, FOAuth2_Enhanced.RefreshToken);
+  FIniSettings.WriteBool('Authentication', LTokenName + '_PKCE', FOAuth2_Enhanced.UsePKCE );
+  FIniSettings.WriteString('Authentication', LTokenName + '_PKCE_Verifier', FOAuth2_Enhanced.PKCEVerifier);
+  FIniSettings.WriteString('Authentication', LTokenName + '_PKCE_Challenge', FOAuth2_Enhanced.PKCEChallenge);
+
   var jwt := TJWT.Create(FOAuth2_Enhanced.IDToken);
   if jwt.Payload.ContainsKey('email') then
   begin
@@ -228,7 +238,7 @@ end;
 
 function TEmailOAuthDataModule.ReadString(const Ident, Default: string): string;
 begin
-  Result := FIniSettings.ReadString('Authentication', Ident, '');
+  Result := FIniSettings.ReadString('Authentication', Ident, Default);
 end;
 
 procedure TEmailOAuthDataModule.DeleteSASL(SASLMechanisms : TIdSASLEntries; xClass: TIdSASLOAuthBaseClass);
@@ -689,6 +699,12 @@ begin
   IdPOP3.Disconnect;
 end;
 
+procedure TEmailOAuthDataModule.SetPKCE(const Value: Boolean);
+begin
+  fPKCE := Value;
+  FOAuth2_Enhanced.UsePKCE := fPKCE;
+end;
+
 procedure TEmailOAuthDataModule.SetupAuthenticator;
 begin
   FOAuth2_Enhanced.ClientID := Provider.ClientID;
@@ -699,6 +715,9 @@ begin
   FOAuth2_Enhanced.AccessTokenEndpoint := Provider.AccessTokenEndpoint;
 
   FOAuth2_Enhanced.RefreshToken := FIniSettings.ReadString('Authentication', Provider.TokenName, '');
+  FOAuth2_Enhanced.UsePKCE := FIniSettings.ReadBool('Authentication', Provider.TokenName + '_PKCE', False);
+  FOAuth2_Enhanced.PKCEVerifier := FIniSettings.ReadString('Authentication', Provider.TokenName + '_PKCE_Verifier', '');
+  FOAuth2_Enhanced.PKCEChallenge := FIniSettings.ReadString('Authentication', Provider.TokenName + '_PKCE_Challenge', '');
   SendAddress := FIniSettings.ReadString('Authentication', Provider.TokenName + 'Email', '');
 
 

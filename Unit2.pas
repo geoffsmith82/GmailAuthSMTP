@@ -33,11 +33,9 @@ type
     btnCheckMsg: TButton;
     btnClearAuthToken: TButton;
     btnCheckIMAP: TButton;
-    mmoLogging: TMemo;
     btnSendViaREST: TButton;
     PageControl1: TPageControl;
     tsEmail: TTabSheet;
-    tsLogging: TTabSheet;
     lblFrom: TLabel;
     lblRecipientAddress: TLabel;
     edtFromAddress: TEdit;
@@ -50,6 +48,8 @@ type
     lblSubject: TLabel;
     edtSubject: TEdit;
     btnSendHTMLMsg: TButton;
+    mmoLogging: TMemo;
+    chkPKCE: TCheckBox;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnCheckMsgClick(Sender: TObject);
@@ -170,6 +170,7 @@ end;
 
 procedure TForm2.btnAuthenticateClick(Sender: TObject);
 begin
+  EmailOAuthDataModule.PKCE := chkPKCE.Checked;
   EmailOAuthDataModule.Authenticate;
   UpdateButtonsEnabled;
 end;
